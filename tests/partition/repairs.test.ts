@@ -15,3 +15,18 @@ describe("describeRepair", () => {
     );
   });
 });
+
+describe("describeRepair (contracts)", () => {
+  it("explains contract moves and fan-outs", () => {
+    const label = (id: string) => ({ contracts: "T0", store: "T1", form: "T2" })[id] ?? id;
+    expect(
+      describeRepair(
+        { kind: "contract", task: "contracts", files: ["src/types.ts"], from: ["store"] },
+        label,
+      ),
+    ).toBe("Moved src/types.ts into a new contract task T0 (was owned by T1).");
+    expect(
+      describeRepair({ kind: "fan-out", task: "form", dep: "store", via: "contracts" }, label),
+    ).toBe("T2 now waits only for contract T0, not for T1, so they run in parallel.");
+  });
+});

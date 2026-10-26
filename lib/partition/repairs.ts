@@ -4,7 +4,9 @@ export type Repair =
   | { kind: "dropped"; task: string }
   | { kind: "unknown-dep"; task: string; dep: string }
   | { kind: "self-dep"; task: string }
-  | { kind: "cycle"; task: string; dep: string };
+  | { kind: "cycle"; task: string; dep: string }
+  | { kind: "contract"; task: string; files: string[]; from: string[] }
+  | { kind: "fan-out"; task: string; dep: string; via: string };
 
 export function describeRepair(r: Repair, label: (id: string) => string = (id) => id): string {
   switch (r.kind) {
@@ -18,5 +20,9 @@ export function describeRepair(r: Repair, label: (id: string) => string = (id) =
       return `Removed ${label(r.task)}'s dependency on itself.`;
     case "cycle":
       return `Broke a cycle: ${label(r.task)} no longer waits for ${label(r.dep)}.`;
+    case "contract":
+      return `Moved ${r.files.join(", ")} into a new contract task ${label(r.task)} (was owned by ${r.from.map(label).join(", ")}).`;
+    case "fan-out":
+      return `${label(r.task)} now waits only for contract ${label(r.via)}, not for ${label(r.dep)}, so they run in parallel.`;
   }
 }
