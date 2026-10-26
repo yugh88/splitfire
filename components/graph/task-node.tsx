@@ -4,11 +4,13 @@ import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { motion } from "framer-motion";
 import { Embers } from "@/components/embers";
 import { KIND } from "@/components/kind";
+import { StatusBadge, TRACK } from "@/components/mission-control/status-badge";
 import type { TaskNodeData } from "@/lib/client/graph-model";
+import type { TaskStatus } from "@/lib/track/types";
 import { cn } from "@/lib/utils";
 
 export type TaskFlowNode = Node<
-  TaskNodeData & { lit: boolean; selected: boolean; vertical: boolean },
+  TaskNodeData & { lit: boolean; selected: boolean; vertical: boolean; track?: TaskStatus },
   "task"
 >;
 export type WaveLabelNode = Node<{ text: string }, "wave">;
@@ -16,6 +18,8 @@ export type MergeNode = Node<{ vertical: boolean }, "merge">;
 
 export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
   const kind = KIND[data.kind];
+  const track = data.track ? TRACK[data.track] : null;
+  const glowing = data.lit || data.track === "passed";
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.85, y: 8 }}
@@ -23,13 +27,22 @@ export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
       transition={{ type: "spring", stiffness: 320, damping: 24 }}
       className={cn(
         "bg-card relative w-[268px] cursor-pointer rounded-lg border p-3 text-left transition-[box-shadow,border-color] duration-500",
-        kind.border,
+        track ? track.node : kind.border,
+        track?.glow,
         data.selected && "border-fire-amber border-2 shadow-[0_0_28px_-6px_var(--fire-amber)]",
         !data.selected && data.lit && "shadow-[0_0_22px_-8px_var(--fire-orange)]",
         !data.final && "border-dashed",
       )}
     >
-      {data.lit && <Embers seed={data.label.length + data.wave} count={6} />}
+      {data.track === "working" && (
+        <motion.span
+          aria-hidden
+          className="border-fire-amber pointer-events-none absolute -inset-px rounded-lg border"
+          animate={{ opacity: [0.15, 0.85, 0.15], scale: [1, 1.015, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      )}
+      {glowing && <Embers seed={data.label.length + data.wave} count={6} />}
       <Handle
         type="target"
         position={data.vertical ? Position.Top : Position.Left}
@@ -39,8 +52,12 @@ export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
         <span className={kind.text}>
           {data.label} · {data.kind.toUpperCase()}
         </span>
-        {data.estMinutes !== null && (
-          <span className="text-muted-foreground">{data.estMinutes} min</span>
+        {data.track ? (
+          <StatusBadge status={data.track} compact />
+        ) : (
+          data.estMinutes !== null && (
+            <span className="text-muted-foreground">{data.estMinutes} min</span>
+          )
         )}
       </div>
       <div className="line-clamp-2 text-base leading-snug font-semibold">{data.title}</div>

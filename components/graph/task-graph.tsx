@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { type GraphModel, MERGE_ID } from "@/lib/client/graph-model";
 import { layoutGraph, type Positions } from "@/lib/client/layout";
+import type { TaskStatus } from "@/lib/track/types";
 import { MergeTarget, TaskNode, WaveLabel } from "./task-node";
 
 const TASK = { width: 268, height: 124 };
@@ -27,6 +28,8 @@ type Props = {
   selected: string | null;
   onSelect: (id: string | null) => void;
   vertical?: boolean;
+  /** Live status per task id, when mission control is on. */
+  tracks?: Record<string, TaskStatus>;
 };
 
 export function TaskGraph(props: Props) {
@@ -37,7 +40,7 @@ export function TaskGraph(props: Props) {
   );
 }
 
-function Flow({ model, agents, lit, selected, onSelect, vertical = false }: Props) {
+function Flow({ model, agents, lit, selected, onSelect, vertical = false, tracks }: Props) {
   const { fitView } = useReactFlow();
   const [positions, setPositions] = useState<Positions>({});
 
@@ -70,7 +73,13 @@ function Flow({ model, agents, lit, selected, onSelect, vertical = false }: Prop
       id: n.id,
       type: "task",
       position: positions[n.id] ?? { x: 0, y: i * (TASK.height + 24) },
-      data: { ...n, lit: lit.has(n.id), selected: selected === n.id, vertical },
+      data: {
+        ...n,
+        lit: lit.has(n.id),
+        selected: selected === n.id,
+        vertical,
+        track: tracks?.[n.id],
+      },
       draggable: false,
     }));
     for (const wave of model.waves) {
@@ -99,7 +108,7 @@ function Flow({ model, agents, lit, selected, onSelect, vertical = false }: Prop
       });
     }
     return result;
-  }, [model, positions, lit, selected, vertical, agents]);
+  }, [model, positions, lit, selected, vertical, agents, tracks]);
 
   const edges: Edge[] = model.edges.map((e) => ({
     id: e.id,
