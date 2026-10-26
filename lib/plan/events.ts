@@ -50,6 +50,8 @@ type Payloads = {
   error: { code: string; message: string };
 };
 
+export type PlanEventData<K extends PlanEventType> = Payloads[K];
+
 export type PlanEvent = { [K in PlanEventType]: { type: K; data: Payloads[K] } }[PlanEventType];
 
 export type Emit = (event: PlanEvent) => void;
