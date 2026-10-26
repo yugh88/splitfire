@@ -1,5 +1,6 @@
 import { modelTier } from "@/lib/cost/estimate";
 import { speedupLine } from "@/lib/format";
+import { GATES_WORKFLOW_PATH, generateGatesWorkflow } from "@/lib/gates/workflow";
 import { taskLabels, waves } from "@/lib/partition/waves";
 import type { Plan, Task } from "@/lib/types";
 
@@ -15,7 +16,7 @@ export function taskPrompt(task: Task, plan: Plan, opts: ExportOptions = {}): st
   const lines = [
     `# ${label} · ${task.title}`,
     "",
-    `Repo: ${plan.repo} @ ${plan.sha.slice(0, 7)} · Branch: \`splitfire/${task.id}\``,
+    `Repo: ${plan.repo} @ ${plan.sha.slice(0, 7)} · Branch: \`splitfire/${label}\``,
     `Overall feature: ${plan.request}`,
     ...(opts.shareUrl ? [`Plan: ${opts.shareUrl}`] : []),
     `Suggested model: ${modelTier(task.difficulty)} model (${task.model}) · Estimate: ${task.estMinutes} min`,
@@ -63,12 +64,14 @@ export function allPrompts(plan: Plan, opts: ExportOptions = {}): string {
     .join("\n---\n\n");
 }
 
-/** The `.splitfire/` folder: an overview, one prompt file per task and the plan JSON. */
+/** The `.splitfire/` folder plus the gate workflow: an overview, one prompt per task, the plan
+ * JSON, and the GitHub Actions file that runs each task's acceptance checks on push. */
 export function splitfirePack(plan: Plan, opts: ExportOptions = {}): Record<string, string> {
   const labels = taskLabels(plan.tasks);
   const files: Record<string, string> = {
     ".splitfire/README.md": overview(plan, opts),
     ".splitfire/plan.json": JSON.stringify(plan, null, 2) + "\n",
+    [GATES_WORKFLOW_PATH]: generateGatesWorkflow(plan),
   };
   for (const task of orderedTasks(plan)) {
     files[`.splitfire/tasks/${labels.get(task.id)}-${task.id}.md`] = taskPrompt(task, plan, opts);
@@ -94,7 +97,7 @@ function overview(plan: Plan, opts: ExportOptions): string {
     "",
     `${speedupLine(plan)} · collision score ${plan.collisionScore} · est. cost $${plan.totalCostUsd.toFixed(3)}`,
     "",
-    "Run each wave in parallel, one agent per task, each on its own `splitfire/<task-id>` branch.",
+    "Run each wave in parallel, one agent per task, each on its own `splitfire/T<n>` branch.",
     "Start a wave when every task it waits for is merged. Every file has exactly one owner.",
     "",
     "| Task | Wave | Kind | Title | Files | Waits for | Model | Estimate |",
@@ -102,6 +105,21 @@ function overview(plan: Plan, opts: ExportOptions): string {
     ...rows.filter(Boolean),
     "",
     "Prompts for each task are in `tasks/`. The full plan is in `plan.json`.",
+    "",
+    "## How done-checks work",
+    "",
+    "This pack includes `.github/workflows/splitfire-gates.yml`. Commit it next to `.splitfire/`.",
+    "Push a task branch named `splitfire/Tn` (T0 is the first task above) and the workflow:",
+    "",
+    "- validates the branch name against `^T[0-9]+$` and finds that task in `plan.json`;",
+    "- turns the task's acceptance list into commands, accepting known tools (npm, pnpm, yarn,",
+    "  npx, vitest, playwright, pytest, tsc, go, cargo) and file-exists checks only;",
+    "- runs those commands and reports a check run named `splitfire/Tn` on the pushed commit,",
+    "  with `success` or `failure` and a short summary.",
+    "",
+    "Checks the parser cannot run (for example `git diff touches only owned files`) are listed as",
+    "manual in the summary and never executed. Commands only ever come from `plan.json`; commit",
+    "messages and branch names are never executed.",
     "",
   ].join("\n");
 }
