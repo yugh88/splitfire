@@ -28,6 +28,61 @@ export function collisionScore(tasks: Pick<DraftTask, "id" | "ownedFiles">[]): n
   return findCollisions(tasks).reduce((sum, c) => sum + c.tasks.length - 1, 0);
 }
 
+/** The ownership fields a re-split can touch; every other task field is preserved. */
+export type OwnedFiles = { id: string; ownedFiles: string[]; readFiles: string[] };
+
+/** Collision state recomputed for a set of tasks after an ownership change. */
+export type CollisionState = { collisions: Collision[]; collisionScore: number };
+
+/** Recomputes collisions and the collision score for the given ownership. */
+export function rescoreOwnership(tasks: Pick<DraftTask, "id" | "ownedFiles">[]): CollisionState {
+  return { collisions: findCollisions(tasks), collisionScore: collisionScore(tasks) };
+}
+
+/** Result of a re-split: the updated tasks, the new collision state, and whether anything moved. */
+export type Resplit<T> = CollisionState & { tasks: T[]; changed: boolean };
+
+/**
+ * Moves `file` to `toTaskId` and recomputes the collision score, for the interactive re-split
+ * (a drag between task cards). The file leaves every other owner and becomes read-only context
+ * for tasks that used to own it. A task left owning nothing is kept so the move can be undone;
+ * unknown files or task ids leave the plan untouched. Pure: the input tasks are not mutated.
+ */
+export function reassignFile<T extends OwnedFiles>(
+  tasks: T[],
+  file: string,
+  toTaskId: string,
+): Resplit<T> {
+  const path = normalizePath(file);
+  const target = tasks.find((t) => t.id === toTaskId);
+  if (!path || !target) return { tasks, ...rescoreOwnership(tasks), changed: false };
+
+  let changed = false;
+  const next = tasks.map((task) => {
+    if (task.id === toTaskId) {
+      const ownedFiles = unique([...task.ownedFiles, path]);
+      const readFiles = task.readFiles.filter((f) => f !== path);
+      if (
+        ownedFiles.length === task.ownedFiles.length &&
+        readFiles.length === task.readFiles.length
+      )
+        return task;
+      changed = true;
+      return { ...task, ownedFiles, readFiles };
+    }
+    if (!task.ownedFiles.includes(path)) return task;
+    changed = true;
+    return {
+      ...task,
+      ownedFiles: task.ownedFiles.filter((f) => f !== path),
+      readFiles: unique([...task.readFiles, path]),
+    };
+  });
+
+  if (!changed) return { tasks, ...rescoreOwnership(tasks), changed: false };
+  return { tasks: next, ...rescoreOwnership(next), changed: true };
+}
+
 /** Lowercase slug ids, unique, with dependsOn rewritten to match. */
 export function normalizeProposals(proposals: TaskProposal[]): DraftTask[] {
   const used = new Set<string>();
