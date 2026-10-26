@@ -8,11 +8,12 @@ export type KV = {
   incrBy(key: string, amount: number, ttlSeconds?: number): Promise<number>;
 };
 
-let instance: KV | null = null;
+// On globalThis so route handlers and pages (separate bundles in Next.js) share one store.
+const holder = globalThis as typeof globalThis & { __splitfireKv?: KV };
 
 export function kv(): KV {
-  instance ??= process.env.UPSTASH_REDIS_REST_URL ? upstash() : memory();
-  return instance;
+  holder.__splitfireKv ??= process.env.UPSTASH_REDIS_REST_URL ? upstash() : memory();
+  return holder.__splitfireKv;
 }
 
 function upstash(): KV {
