@@ -1,13 +1,21 @@
 import type { RepoAnalysis } from "@/lib/analyze/load";
+import { acceptanceChecks } from "@/lib/context/acceptance";
+import { withContextPacks } from "@/lib/context/pack";
 import { contextTokens, estimateTask, round } from "@/lib/cost/estimate";
 import { estimateTokens } from "@/lib/cost/pricing";
 import type { Config } from "@/lib/env";
 import type { Partition } from "@/lib/partition";
+import { insertContracts } from "@/lib/partition/contracts";
+import type { DraftTask } from "@/lib/partition/ownership";
+import type { Repair } from "@/lib/partition/repairs";
 import { schedule } from "@/lib/partition/schedule";
 import type { Plan, Task } from "@/lib/types";
 import type { Metrics } from "./events";
 
-/** Attaches estimates to partitioned tasks and computes plan-level metrics. */
+/**
+ * Turns partitioned tasks into the final plan: context packs, model + cost estimates, acceptance
+ * checks and schedule. Contracts-first is applied only when it shortens the parallel time.
+ */
 export function assemblePlan(args: {
   id: string;
   analysis: RepoAnalysis;
@@ -15,16 +23,32 @@ export function assemblePlan(args: {
   partition: Partition;
   agents: number;
   cfg: Config;
-}): { plan: Plan; metrics: Metrics } {
+}): { plan: Plan; metrics: Metrics; repairs: Repair[] } {
   const { analysis, partition, cfg } = args;
   const bytes = new Map(analysis.files.map((f) => [f.path, f.bytes]));
-  const tasks: Task[] = partition.tasks.map((t) => ({
-    ...t,
-    ...estimateTask(t, bytes, cfg),
-    acceptance: [],
-  }));
+  const existing = new Set(analysis.files.map((f) => f.path));
 
-  const s = schedule(tasks, args.agents);
+  const build = (drafts: DraftTask[]) => {
+    const tasks: Task[] = withContextPacks(drafts, analysis.edges).map((t) => ({
+      ...t,
+      ...estimateTask(t, bytes, cfg),
+      acceptance: acceptanceChecks(t, analysis.tooling, existing),
+    }));
+    return { tasks, schedule: schedule(tasks, args.agents) };
+  };
+
+  let chosen = build(partition.tasks);
+  let repairs = partition.repairs;
+  const contracts = insertContracts(partition.tasks, analysis.edges, bytes);
+  if (contracts.inserted) {
+    const alternative = build(contracts.tasks);
+    if (alternative.schedule.parallelMinutes < chosen.schedule.parallelMinutes) {
+      chosen = alternative;
+      repairs = [...repairs, ...contracts.repairs];
+    }
+  }
+
+  const { tasks, schedule: s } = chosen;
   const repoTokens = estimateTokens(analysis.files.reduce((n, f) => n + f.bytes, 0));
   const planMetrics = {
     collisionScore: partition.collisionScore,
@@ -50,5 +74,6 @@ export function assemblePlan(args: {
       ...planMetrics,
     },
     metrics: { ...planMetrics, criticalPath: s.criticalPath },
+    repairs,
   };
 }

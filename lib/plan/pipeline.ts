@@ -11,7 +11,7 @@ import type { Emit, PlanReport } from "./events";
 import { proposeTasks } from "./planner";
 
 /** Bump when planning logic changes so cached plans are not reused. */
-export const SETTINGS_VERSION = "2";
+export const SETTINGS_VERSION = "3";
 
 const PLAN_TTL_SECONDS = 30 * 24 * 3600;
 
@@ -97,7 +97,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
     });
 
     const parts = partition(proposed.proposals, analysis.edges);
-    const { plan, metrics } = assemblePlan({
+    const { plan, metrics, repairs } = assemblePlan({
       id,
       analysis,
       request: input.request,
@@ -113,7 +113,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
         collisions: parts.collisions,
         collisionScoreBefore: parts.collisionScoreBefore,
         collisionScore: parts.collisionScore,
-        repairs: parts.repairs,
+        repairs,
       },
     });
     emit({ type: "metrics", data: metrics });
@@ -125,7 +125,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
       draft: parts.draft,
       collisions: parts.collisions,
       collisionScoreBefore: parts.collisionScoreBefore,
-      repairs: parts.repairs,
+      repairs,
       criticalPath: metrics.criticalPath,
     };
     await store.set(`plan:${id}`, report, PLAN_TTL_SECONDS);
