@@ -101,6 +101,24 @@ describe("proposeTasks", () => {
     expect(result.notice).toBe(BUDGET_NOTICE);
   });
 
+  it("stops trying models once the planning deadline is used up", async () => {
+    const seen: LlmCall[] = [];
+    const result = await proposeTasks(await fixtureAnalysis(), "add user greeting", {
+      cfg: testConfig(),
+      store: memory(),
+      deadlineMs: 20_015,
+      callModel: async (call) => {
+        seen.push(call);
+        await new Promise((r) => setTimeout(r, 30));
+        return { ok: false, error: "slow", usage };
+      },
+      onTask: () => {},
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.timeoutMs).toBeLessThanOrEqual(20_015);
+    expect(result.planner).toBe("deterministic");
+  });
+
   it("says no model is configured (not budget) when env has no endpoint", async () => {
     const { result, seen } = await run(
       [],

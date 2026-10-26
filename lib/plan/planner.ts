@@ -15,6 +15,10 @@ import type { TaskProposal } from "./schema";
 export const BUDGET_NOTICE = "demo budget reached";
 export const NO_MODEL_NOTICE = "no model configured";
 
+const PLANNING_DEADLINE_MS = 240_000;
+const CALL_TIMEOUT_MS = 120_000;
+const MIN_ATTEMPT_MS = 20_000;
+
 /** True when at least one endpoint and model name are set. */
 export function llmConfigured(cfg: Config): boolean {
   return Boolean((cfg.primary && cfg.plannerModel) || cfg.fallback);
@@ -43,6 +47,8 @@ type Deps = {
   onTask: (task: TaskProposal, attempt: number) => void;
   callModel?: typeof streamTaskProposals;
   delayMs?: number;
+  /** Total time the model attempts may take; keeps the request inside the function limit. */
+  deadlineMs?: number;
 };
 
 /** Validate → repair → fallback model → deterministic plan. Never throws on bad model output. */
@@ -87,7 +93,10 @@ export async function proposeTasks(
   let planSpent = 0;
   let total = spent;
 
+  const deadline = Date.now() + (deps.deadlineMs ?? PLANNING_DEADLINE_MS);
   for (const [attempt, target] of attempts.entries()) {
+    const remaining = deadline - Date.now();
+    if (remaining < MIN_ATTEMPT_MS) break;
     const prompt = lastError
       ? `${basePrompt}\n\nYour previous answer was rejected: ${lastError}\nReturn corrected JSON only.`
       : basePrompt;
@@ -116,6 +125,7 @@ export async function proposeTasks(
       system: SYSTEM_PROMPT,
       prompt,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
+      timeoutMs: Math.min(CALL_TIMEOUT_MS, remaining),
       onTask: (task) => onTask(task, attempt + 1),
     });
 
