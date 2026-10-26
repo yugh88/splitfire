@@ -213,11 +213,12 @@ function ContractsFirst(props: {
   metrics: Metrics;
 }) {
   const { tasks, waves, labels, metrics } = props;
-  const first = waves[0]?.ids ?? [];
   const second = waves[1]?.ids ?? [];
-  const contract =
-    first.length > 0 && first.every((id) => tasks.find((t) => t.id === id)?.kind === "contract");
-  const fan = contract ? second : first;
+  const first = (waves[0]?.ids ?? []).filter(
+    (id) => tasks.find((t) => t.id === id)?.kind === "contract",
+  );
+  const contract = first.length > 0 && second.length > 0;
+  const fan = contract ? second : (waves[0]?.ids ?? []);
   const title = (id: string) => tasks.find((t) => t.id === id)?.title ?? id;
   return (
     <section className="border-border bg-background/40 rounded-xl border p-4">

@@ -246,7 +246,7 @@ function ContractsCallout(props: {
   const contracts = firstTasks.filter((t): t is Task => t?.kind === "contract");
   const fanOut = second && second.ids.length > 1;
   const text =
-    contracts.length > 0 && contracts.length === firstTasks.length && fanOut
+    contracts.length > 0 && fanOut
       ? `Contracts-first: ${contracts.map((t) => props.labels.get(t.id)).join(", ")} lands shared types in ${formatMinutes(Math.max(...contracts.map((t) => t.estMinutes)))}, so ${plural(Math.min(second.ids.length, props.agents), "agent")} start wave 2 together instead of waiting in a chain.`
       : `${plural(props.model.waves.length, "wave")} · up to ${plural(props.agents, "agent")} at a time, each on files no one else touches.`;
   return (
