@@ -2,6 +2,9 @@
   "name": "splitfire",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "splitfire": "./bin/splitfire.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +15,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "splitfire": "npx --yes tsx bin/splitfire.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.87",
@@ -57,6 +61,85 @@
     "typescript": "^5",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.7"
+  },
+  "splitfire": {
+    "entry": "./bin/splitfire.ts",
+    "runtime": "tsx",
+    "pack": {
+      "version": 1,
+      "dir": ".splitfire",
+      "files": {
+        "overview": ".splitfire/README.md",
+        "manifest": ".splitfire/plan.json",
+        "task": ".splitfire/tasks/{label}-{id}.md"
+      },
+      "manifestSchema": {
+        "id": "string - plan id: hash(repo, sha, request, agents, settingsVersion)",
+        "repo": "string - owner/name",
+        "sha": "string - full commit sha",
+        "request": "string - the feature request",
+        "tasks": "Task[] - see taskSchema",
+        "collisionScore": "number - files with more than one owner; 0 after repair",
+        "serialMinutes": "number",
+        "parallelMinutes": "number",
+        "speedup": "number",
+        "agents": "number",
+        "tokensFullRepo": "number",
+        "tokensWithPacks": "number",
+        "totalCostUsd": "number"
+      },
+      "taskSchema": {
+        "id": "string",
+        "title": "string",
+        "goal": "string",
+        "kind": "contract | feature | test | docs",
+        "ownedFiles": "string[] - exclusive; one owner per file",
+        "readFiles": "string[] - context only",
+        "dependsOn": "string[] - task ids; must be acyclic",
+        "difficulty": "1 | 2 | 3",
+        "model": "string",
+        "estTokens": "number",
+        "estCostUsd": "number",
+        "estMinutes": "number",
+        "acceptance": "string[] - shell commands that prove the task is done"
+      }
+    },
+    "commands": {
+      "plan": {
+        "usage": "npx splitfire plan \"<request>\"",
+        "description": "Plan a GitHub repo and write the .splitfire pack.",
+        "args": [
+          {
+            "name": "request",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "options": [
+          {
+            "name": "--repo",
+            "type": "string",
+            "description": "owner/name; defaults to the current directory's git remote"
+          },
+          {
+            "name": "--agents",
+            "type": "number",
+            "default": 2
+          },
+          {
+            "name": "--out",
+            "type": "string",
+            "default": ".splitfire"
+          },
+          {
+            "name": "--mock",
+            "type": "boolean",
+            "default": false,
+            "description": "Plan without model calls, using the deterministic planner"
+          }
+        ]
+      }
+    }
   },
   "engines": {
     "node": ">=20"
