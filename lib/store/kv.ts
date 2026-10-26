@@ -12,7 +12,8 @@ export type KV = {
 const holder = globalThis as typeof globalThis & { __splitfireKv?: KV };
 
 export function kv(): KV {
-  holder.__splitfireKv ??= process.env.UPSTASH_REDIS_REST_URL ? upstash() : memory();
+  const configured = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  holder.__splitfireKv ??= configured ? upstash() : memory();
   return holder.__splitfireKv;
 }
 

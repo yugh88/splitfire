@@ -48,3 +48,8 @@ next-env.d.ts
 
 # local kickoff notes
 PROMPT.md
+
+# agent tooling installed by CLIs
+.agents/
+.claude/
+skills-lock.json
