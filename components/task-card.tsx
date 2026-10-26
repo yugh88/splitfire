@@ -1,16 +1,17 @@
 "use client";
 
 import { Check, Eye, Lock, X } from "lucide-react";
+import { CopyPromptButton, downloadPack } from "@/components/export-actions";
 import { KIND } from "@/components/kind";
 import { Button } from "@/components/ui/button";
 import { modelTier } from "@/lib/cost/estimate";
 import { formatUsd } from "@/lib/format";
-import type { Task } from "@/lib/types";
+import type { Plan, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Props = { task: Task; labels: Map<string, string>; onClose?: () => void };
+type Props = { task: Task; labels: Map<string, string>; plan?: Plan; onClose?: () => void };
 
-export function TaskCard({ task, labels, onClose }: Props) {
+export function TaskCard({ task, labels, plan, onClose }: Props) {
   const kind = KIND[task.kind];
   return (
     <article
@@ -76,6 +77,14 @@ export function TaskCard({ task, labels, onClose }: Props) {
             {task.dependsOn.map((d) => labels.get(d) ?? d).join(", ")}
           </span>
         </p>
+      )}
+      {plan && (
+        <div className="mt-4 flex gap-2">
+          <CopyPromptButton task={task} plan={plan} />
+          <Button variant="outline" className="h-11" onClick={() => downloadPack(plan)}>
+            Download pack
+          </Button>
+        </div>
       )}
     </article>
   );

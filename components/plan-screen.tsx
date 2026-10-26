@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Zap } from "lucide-react";
+import { CopyAllBar } from "@/components/export-actions";
 import { useEffect, useMemo, useState } from "react";
 import { TaskGraph } from "@/components/graph/task-graph";
 import { HeatmapView } from "@/components/heatmap-view";
@@ -163,6 +164,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
                 <div className="p-3">
                   {done ? (
                     <WaveList
+                      plan={state.report?.plan}
                       tasks={done.tasks}
                       waves={model.waves}
                       labels={labels}
@@ -190,7 +192,12 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
         {wide && (desktop || task) && (
           <aside>
             {task ? (
-              <TaskCard task={task} labels={labels} onClose={() => setSelected(null)} />
+              <TaskCard
+                task={task}
+                labels={labels}
+                plan={state.report?.plan}
+                onClose={() => setSelected(null)}
+              />
             ) : (
               <div className="border-border text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
                 {done
@@ -201,6 +208,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
           </aside>
         )}
       </div>
+      {!wide && state.report && <CopyAllBar plan={state.report.plan} />}
     </div>
   );
 }

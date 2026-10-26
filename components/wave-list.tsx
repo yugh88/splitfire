@@ -3,10 +3,11 @@
 import { KIND } from "@/components/kind";
 import { TaskCard } from "@/components/task-card";
 import type { Wave } from "@/lib/client/graph-model";
-import type { Task } from "@/lib/types";
+import type { Plan, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  plan?: Plan;
   tasks: Task[];
   waves: Wave[];
   labels: Map<string, string>;
@@ -16,7 +17,7 @@ type Props = {
 };
 
 /** Phone layout: tasks as rows grouped by wave; tapping a row opens its card inline. */
-export function WaveList({ tasks, waves, labels, agents, selected, onSelect }: Props) {
+export function WaveList({ plan, tasks, waves, labels, agents, selected, onSelect }: Props) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   return (
     <div className="space-y-4">
@@ -58,7 +59,7 @@ export function WaveList({ tasks, waves, labels, agents, selected, onSelect }: P
                   </button>
                   {selected === task.id && (
                     <div className="mt-2">
-                      <TaskCard task={task} labels={labels} />
+                      <TaskCard task={task} labels={labels} plan={plan} />
                     </div>
                   )}
                 </li>

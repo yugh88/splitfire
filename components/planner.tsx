@@ -2,6 +2,7 @@
 
 import { RotateCcw } from "lucide-react";
 import { useState } from "react";
+import { ExportMenu, ShareButton } from "@/components/export-actions";
 import { type FormValues, Landing } from "@/components/landing";
 import { PlanScreen } from "@/components/plan-screen";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,8 @@ export function Planner() {
           <Button variant="outline" onClick={back}>
             <RotateCcw /> Re-split
           </Button>
+          {state.report && <ShareButton plan={state.report.plan} />}
+          {state.report && <ExportMenu plan={state.report.plan} />}
         </>
       }
     />
