@@ -29,7 +29,7 @@ export async function streamTaskProposals(call: LlmCall): Promise<LlmResult> {
     baseURL: call.endpoint.baseURL,
     apiKey: call.endpoint.apiKey,
     includeUsage: true,
-    fetch: withoutThoughts(fetch),
+    fetch: openModelFetch(fetch),
   });
   let streamError: string | null = null;
   const result = streamObject({
@@ -40,7 +40,7 @@ export async function streamTaskProposals(call: LlmCall): Promise<LlmResult> {
     prompt: call.prompt,
     maxOutputTokens: call.maxOutputTokens,
     temperature: 0.2,
-    maxRetries: 0,
+    maxRetries: 2, // transient 5xx/429 from free tiers; validation failures are handled by the planner
     abortSignal: AbortSignal.timeout(call.timeoutMs ?? 60_000),
     onError: ({ error }) => {
       streamError = errorMessage(error);
@@ -74,49 +74,75 @@ function errorMessage(error: unknown): string {
 }
 
 const THOUGHT_TAG = /<\/?thought>/g;
+const FENCE = /```(?:json)?/g;
 
 /**
  * Some open models (Gemma 4 on the Gemini API) stream their reasoning as ordinary content chunks
- * flagged `extra_content.google.thought`, and prefix the answer with a stray `</thought>`. This
- * drops those chunks and tags so only the answer reaches the JSON parser. Other lines pass through.
+ * flagged `extra_content.google.thought`, and wrap the answer in stray `</thought>` tags or
+ * markdown fences. A cleaner is created per response: it drops thought chunks, tags and fences,
+ * and everything before the first `{`, so only the JSON reaches the parser.
  */
-export function cleanSseLine(line: string): string {
-  if (!line.startsWith("data: ") || line === "data: [DONE]") return line;
-  let chunk: unknown;
-  try {
-    chunk = JSON.parse(line.slice(6));
-  } catch {
-    return line;
-  }
-  const choices = (chunk as { choices?: { delta?: Record<string, unknown> }[] }).choices;
-  const delta = choices?.[0]?.delta;
-  if (!delta || typeof delta.content !== "string") return line;
-  const google = (delta.extra_content as { google?: { thought?: boolean } } | undefined)?.google;
-  delta.content = google?.thought ? "" : delta.content.replace(THOUGHT_TAG, "");
-  delete delta.extra_content;
-  return `data: ${JSON.stringify(chunk)}`;
+export function createSseCleaner(): (line: string) => string {
+  let started = false;
+  return (line) => {
+    if (!line.startsWith("data: ") || line === "data: [DONE]") return line;
+    let chunk: unknown;
+    try {
+      chunk = JSON.parse(line.slice(6));
+    } catch {
+      return line;
+    }
+    const choices = (chunk as { choices?: { delta?: Record<string, unknown> }[] }).choices;
+    const delta = choices?.[0]?.delta;
+    if (!delta || typeof delta.content !== "string") return line;
+    const google = (delta.extra_content as { google?: { thought?: boolean } } | undefined)?.google;
+    let content = google?.thought ? "" : delta.content.replace(THOUGHT_TAG, "").replace(FENCE, "");
+    if (!started) {
+      const brace = content.indexOf("{");
+      content = brace === -1 ? "" : content.slice(brace);
+      started = brace !== -1;
+    }
+    delta.content = content;
+    delete delta.extra_content;
+    return `data: ${JSON.stringify(chunk)}`;
+  };
 }
 
-function withoutThoughts(base: typeof fetch): typeof fetch {
+/** Gemma on the Gemini API rejects JSON mode on long prompts; the prompt already fixes the shape. */
+export function adaptRequestBody(body: string): string {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(body) as Record<string, unknown>;
+  } catch {
+    return body;
+  }
+  if (typeof parsed.model !== "string" || !parsed.model.startsWith("gemma")) return body;
+  delete parsed.response_format;
+  return JSON.stringify(parsed);
+}
+
+function openModelFetch(base: typeof fetch): typeof fetch {
   return async (input, init) => {
-    const res = await base(input, init);
+    const body = typeof init?.body === "string" ? adaptRequestBody(init.body) : init?.body;
+    const res = await base(input, { ...init, body });
     if (!res.body || !res.headers.get("content-type")?.includes("text/event-stream")) return res;
+    const clean = createSseCleaner();
     let buffer = "";
     const encoder = new TextEncoder();
-    const body = res.body.pipeThrough(new TextDecoderStream()).pipeThrough(
+    const stream = res.body.pipeThrough(new TextDecoderStream()).pipeThrough(
       new TransformStream<string, Uint8Array>({
         transform(text, controller) {
           buffer += text;
           const lines = buffer.split("\n");
           buffer = lines.pop() ?? "";
-          for (const line of lines) controller.enqueue(encoder.encode(`${cleanSseLine(line)}\n`));
+          for (const line of lines) controller.enqueue(encoder.encode(`${clean(line)}\n`));
         },
         flush(controller) {
-          if (buffer) controller.enqueue(encoder.encode(cleanSseLine(buffer)));
+          if (buffer) controller.enqueue(encoder.encode(clean(buffer)));
         },
       }),
     );
-    return new Response(body, {
+    return new Response(stream, {
       status: res.status,
       statusText: res.statusText,
       headers: res.headers,

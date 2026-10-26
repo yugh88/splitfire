@@ -4,7 +4,8 @@ import { planId, runPlan } from "@/lib/plan/pipeline";
 import { memory } from "@/lib/store/kv";
 import { fakeFetch } from "../helpers/fetch";
 import { loadFixture } from "../helpers/fixture";
-import { testConfig } from "../helpers/plan";
+import type { LlmCall, LlmResult } from "@/lib/plan/llm";
+import { proposal, testConfig } from "../helpers/plan";
 
 function githubForFixture() {
   const { files, contents } = loadFixture();
@@ -56,6 +57,30 @@ describe("runPlan", () => {
     const replay = await collect((emit) => runPlan(input, emit, deps));
     const replayDone = replay.at(-1);
     expect(replayDone?.type === "done" && replayDone.data).toEqual(done.data);
+  });
+
+  it("re-plans instead of replaying a deterministic fallback once a model is available", async () => {
+    const { impl } = githubForFixture();
+    const store = memory();
+    const input = { repo: "acme/sample", request: "add user greeting", agents: 4, ip: "2.2.2.2" };
+    const offline = { cfg: testConfig({ primary: null, fallback: null }), store, fetchImpl: impl };
+    const first = await collect((emit) => runPlan(input, emit, offline));
+    expect(first.at(-1)).toMatchObject({ type: "done", data: { planner: "deterministic" } });
+
+    const again = await collect((emit) => runPlan(input, emit, offline));
+    expect(again.some((e) => e.type === "task")).toBe(true); // replayed, still no model
+
+    const tasks = [proposal("greet", ["src/index.ts"])];
+    const callModel = async (call: LlmCall): Promise<LlmResult> => {
+      tasks.forEach(call.onTask);
+      return { ok: true, tasks, usage: { inputTokens: 10, outputTokens: 10 } };
+    };
+    const online = await collect((emit) =>
+      runPlan(input, emit, { cfg: testConfig(), store, fetchImpl: impl, callModel }),
+    );
+    expect(online.at(-1)).toMatchObject({ type: "done", data: { planner: "llm" } });
+    const replayed = await collect((emit) => runPlan(input, emit, offline));
+    expect(replayed.at(-1)).toMatchObject({ type: "done", data: { planner: "llm" } });
   });
 
   it("rejects bad repo input", async () => {

@@ -8,7 +8,8 @@ import { kv, type KV } from "@/lib/store/kv";
 import { allowPlan } from "@/lib/store/ratelimit";
 import { assemblePlan } from "./assemble";
 import type { Emit, PlanReport } from "./events";
-import { proposeTasks } from "./planner";
+import type { streamTaskProposals } from "./llm";
+import { llmConfigured, proposeTasks } from "./planner";
 
 /** Bump when planning logic changes so cached plans are not reused. */
 export const SETTINGS_VERSION = "3";
@@ -17,7 +18,13 @@ const PLAN_TTL_SECONDS = 30 * 24 * 3600;
 
 export type PlanInput = { repo: string; request: string; agents: number; ip: string };
 
-type Deps = { cfg?: Config; store?: KV; fetchImpl?: typeof fetch; delayMs?: number };
+type Deps = {
+  cfg?: Config;
+  store?: KV;
+  fetchImpl?: typeof fetch;
+  delayMs?: number;
+  callModel?: typeof streamTaskProposals;
+};
 
 export function planId(repo: string, sha: string, request: string, agents: number): string {
   return createHash("sha256")
@@ -67,7 +74,9 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
 
     const id = planId(analysis.repo, analysis.sha, input.request, input.agents);
     const stored = await store.get<PlanReport>(`plan:${id}`);
-    if (stored) {
+    // A deterministic fallback is replayed only while no model is available to do better.
+    const upgradable = stored?.planner === "deterministic" && !cfg.mockLlm && llmConfigured(cfg);
+    if (stored && !upgradable) {
       log.replay = true;
       replay(stored, emit);
       return;
@@ -88,6 +97,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
       cfg,
       store,
       delayMs: deps.delayMs,
+      callModel: deps.callModel,
       onTask: (task, attempt) => emit({ type: "task", data: { attempt, task } }),
     });
     Object.assign(log, {

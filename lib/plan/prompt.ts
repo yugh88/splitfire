@@ -5,7 +5,7 @@ import { MAX_TASKS } from "./schema";
 /** Hard cap on the repo map we send (~15k tokens). */
 export const MAX_PROMPT_CHARS = 60_000;
 /** Room for reasoning models that spend output tokens thinking before the JSON. */
-export const MAX_OUTPUT_TOKENS = 8_000;
+export const MAX_OUTPUT_TOKENS = 6_000;
 
 export const SYSTEM_PROMPT = `You are Splitfire's planner. Split a feature request into tasks that separate coding agents can do at the same time in one repo.
 
@@ -17,7 +17,7 @@ Rules:
 - Between 2 and ${MAX_TASKS} tasks. difficulty: 1 = boilerplate, 2 = normal, 3 = tricky logic.
 - kind is one of: contract, feature, test, docs.
 
-Reply with JSON only, in exactly this shape:
+Reply with JSON only (no markdown, no prose), in exactly this shape:
 {"elements":[{"id":"short-kebab-id","title":"Short title","goal":"One or two sentences.","kind":"feature","ownedFiles":["path/to/file.ts"],"dependsOn":["other-task-id"],"difficulty":2}]}`;
 
 /** The user message: the request plus a relevance-ordered repo map that fits the char cap. */

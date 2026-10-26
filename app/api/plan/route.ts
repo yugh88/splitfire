@@ -4,7 +4,8 @@ import type { PlanEvent } from "@/lib/plan/events";
 import { runPlan } from "@/lib/plan/pipeline";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Free-tier open models can be slow; the planner's fallback chain needs headroom.
+export const maxDuration = 300;
 
 const BodySchema = z.object({
   repo: z.string().trim().min(3).max(200),
