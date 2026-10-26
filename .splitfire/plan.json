@@ -1,0 +1,149 @@
+{
+  "id": "cf0746ed8f6c7194",
+  "repo": "yugh88/splitfire",
+  "sha": "be45d6a98dcaf6c8ef62bd118b73d7aff85dca9d",
+  "request": "Add an npx splitfire CLI that plans a repo and writes the .splitfire pack, and a re-split interaction where the user drags a file to another task and the collision score recomputes live",
+  "tasks": [
+    {
+      "id": "cli-contract",
+      "title": "CLI & Pack Contract",
+      "goal": "Define the CLI command structure and the schema for the .splitfire pack file.",
+      "kind": "contract",
+      "ownedFiles": [
+        "package.json"
+      ],
+      "readFiles": [],
+      "dependsOn": [],
+      "difficulty": 1,
+      "model": "gemma-4-26b-a4b-it",
+      "estTokens": 3919,
+      "estCostUsd": 0,
+      "estMinutes": 11,
+      "acceptance": [
+        "npm run typecheck",
+        "git diff --name-only touches only owned files"
+      ]
+    },
+    {
+      "id": "cli-implementation",
+      "title": "Splitfire CLI Implementation",
+      "goal": "Implement the npx splitfire command to run a plan and export the .splitfire pack.",
+      "kind": "feature",
+      "ownedFiles": [
+        "bin/splitfire.ts"
+      ],
+      "readFiles": [],
+      "dependsOn": [
+        "cli-contract"
+      ],
+      "difficulty": 3,
+      "model": "gemma-4-26b-a4b-it",
+      "estTokens": 7000,
+      "estCostUsd": 0,
+      "estMinutes": 28,
+      "acceptance": [
+        "npm run typecheck",
+        "npm run build",
+        "test -f bin/splitfire.ts",
+        "git diff --name-only touches only owned files"
+      ]
+    },
+    {
+      "id": "re-split-logic",
+      "title": "Re-split Collision Logic",
+      "goal": "Expose a function to recompute collision scores when file ownership changes.",
+      "kind": "feature",
+      "ownedFiles": [
+        "lib/partition/ownership.ts"
+      ],
+      "readFiles": [
+        "lib/partition/repairs.ts",
+        "lib/plan/schema.ts",
+        "lib/types.ts"
+      ],
+      "dependsOn": [],
+      "difficulty": 2,
+      "model": "gemma-4-26b-a4b-it",
+      "estTokens": 14278,
+      "estCostUsd": 0,
+      "estMinutes": 18,
+      "acceptance": [
+        "npm run typecheck",
+        "npm run build",
+        "git diff --name-only touches only owned files"
+      ]
+    },
+    {
+      "id": "drag-and-drop-ui",
+      "title": "Interactive Re-split UI",
+      "goal": "Implement drag-and-drop file movement between tasks with live collision score updates.",
+      "kind": "feature",
+      "ownedFiles": [
+        "components/task-card.tsx",
+        "components/plan-screen.tsx"
+      ],
+      "readFiles": [
+        "components/export-actions.tsx",
+        "lib/format.ts",
+        "lib/types.ts",
+        "lib/utils.ts",
+        "components/graph/task-graph.tsx",
+        "components/heatmap-view.tsx",
+        "components/kind.ts",
+        "components/logo.tsx",
+        "components/metric-cards.tsx",
+        "components/progress-steps.tsx",
+        "components/ui/button.tsx",
+        "components/wave-list.tsx",
+        "hooks/use-media-query.ts",
+        "lib/client/graph-model.ts",
+        "lib/client/plan-state.ts",
+        "lib/cost/estimate.ts"
+      ],
+      "dependsOn": [
+        "re-split-logic"
+      ],
+      "difficulty": 3,
+      "model": "gemma-4-26b-a4b-it",
+      "estTokens": 125842,
+      "estCostUsd": 0,
+      "estMinutes": 31,
+      "acceptance": [
+        "npm run typecheck",
+        "npm run build",
+        "git diff --name-only touches only owned files"
+      ]
+    },
+    {
+      "id": "cli-tests",
+      "title": "CLI Integration Tests",
+      "goal": "Verify the CLI can successfully generate a pack from a local or remote repo.",
+      "kind": "test",
+      "ownedFiles": [
+        "tests/cli.test.ts"
+      ],
+      "readFiles": [],
+      "dependsOn": [
+        "cli-implementation"
+      ],
+      "difficulty": 2,
+      "model": "gemma-4-26b-a4b-it",
+      "estTokens": 4600,
+      "estCostUsd": 0,
+      "estMinutes": 18,
+      "acceptance": [
+        "npx vitest run tests/cli.test.ts",
+        "test -f tests/cli.test.ts",
+        "git diff --name-only touches only owned files"
+      ]
+    }
+  ],
+  "collisionScore": 0,
+  "serialMinutes": 106,
+  "parallelMinutes": 57,
+  "speedup": 1.9,
+  "agents": 2,
+  "tokensFullRepo": 362335,
+  "tokensWithPacks": 21077,
+  "totalCostUsd": 0
+}
