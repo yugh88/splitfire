@@ -13,6 +13,12 @@ import { buildPrompt, MAX_OUTPUT_TOKENS, SYSTEM_PROMPT } from "./prompt";
 import type { TaskProposal } from "./schema";
 
 export const BUDGET_NOTICE = "demo budget reached";
+export const NO_MODEL_NOTICE = "no model configured";
+
+/** True when at least one endpoint and model name are set. */
+export function llmConfigured(cfg: Config): boolean {
+  return Boolean((cfg.primary && cfg.plannerModel) || cfg.fallback);
+}
 
 export type CallLog = {
   model: string;
@@ -62,6 +68,7 @@ export async function proposeTasks(
     return { proposals, planner: "mock", notice: null, calls };
   }
 
+  if (!llmConfigured(cfg)) return deterministic(NO_MODEL_NOTICE);
   const spent = await totalSpend(store);
   const model = modelForSpend(spent, cfg);
   if (!model) return deterministic(BUDGET_NOTICE);
@@ -73,7 +80,7 @@ export async function proposeTasks(
   if (cfg.fallback && !downgraded) {
     attempts.push({ endpoint: cfg.fallback, model: cfg.fallback.model, kind: "fallback" });
   }
-  if (attempts.length === 0) return deterministic("no model configured");
+  if (attempts.length === 0) return deterministic(NO_MODEL_NOTICE);
 
   const basePrompt = buildPrompt(analysis, request);
   let lastError: string | null = null;

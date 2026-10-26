@@ -1,5 +1,6 @@
 import { config } from "@/lib/env";
 import { DOWNGRADE_AT, totalSpend } from "@/lib/plan/budget";
+import { llmConfigured } from "@/lib/plan/planner";
 import { kv } from "@/lib/store/kv";
 
 export const runtime = "nodejs";
@@ -17,10 +18,12 @@ export async function GET() {
     planMaxCostUsd: cfg.planMaxCostUsd,
     mode: cfg.mockLlm
       ? "mock"
-      : ratio >= 1
-        ? "deterministic"
-        : ratio >= DOWNGRADE_AT
-          ? "fast-model"
-          : "normal",
+      : !llmConfigured(cfg)
+        ? "no-model"
+        : ratio >= 1
+          ? "deterministic"
+          : ratio >= DOWNGRADE_AT
+            ? "fast-model"
+            : "normal",
   });
 }

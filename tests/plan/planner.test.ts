@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LlmCall, LlmResult } from "@/lib/plan/llm";
-import { BUDGET_NOTICE, proposeTasks } from "@/lib/plan/planner";
+import { BUDGET_NOTICE, NO_MODEL_NOTICE, proposeTasks } from "@/lib/plan/planner";
 import { memory } from "@/lib/store/kv";
 import { fixtureAnalysis, proposal, testConfig } from "../helpers/plan";
 
@@ -98,6 +98,15 @@ describe("proposeTasks", () => {
     const { result, seen } = await run([], testConfig({ planMaxCostUsd: 0.0001 }));
     expect(seen).toHaveLength(0);
     expect(result.notice).toBe(BUDGET_NOTICE);
+  });
+
+  it("says no model is configured (not budget) when env has no endpoint", async () => {
+    const { result, seen } = await run(
+      [],
+      testConfig({ primary: null, fallback: null, plannerModel: "" }),
+    );
+    expect(seen).toHaveLength(0);
+    expect(result).toMatchObject({ planner: "deterministic", notice: NO_MODEL_NOTICE });
   });
 
   it("uses the mock planner without any model call in MOCK_LLM mode", async () => {
