@@ -6,7 +6,10 @@ test("plans an example repo, exports it and opens the share link", async ({ page
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /split the work/i })).toBeVisible();
 
-  await page.getByRole("button", { name: /zustand/ }).click();
+  await page
+    .getByPlaceholder("https://github.com/owner/repo")
+    .fill("https://github.com/pmndrs/zustand");
+  await page.getByRole("button", { name: "Add OAuth login" }).click();
   const metrics = page.locator('[aria-label="Plan metrics"]:visible');
   await expect(metrics).toBeVisible({ timeout: 45_000 });
   await expect(metrics.getByText(/Serial .* → /)).toBeVisible();

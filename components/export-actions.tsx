@@ -35,8 +35,9 @@ export function useCopy(): [boolean, (text: string) => void] {
 export function ShareButton({ plan }: { plan: Plan }) {
   const [copied, copy] = useCopy();
   return (
-    <Button variant="outline" onClick={() => copy(shareUrl(plan))}>
-      {copied ? <Check /> : <Share2 />} {copied ? "Link copied" : "Share"}
+    <Button variant="outline" onClick={() => copy(shareUrl(plan))} aria-label="Share">
+      {copied ? <Check /> : <Share2 />}
+      <span className="hidden sm:inline">{copied ? "Link copied" : "Share"}</span>
     </Button>
   );
 }
@@ -76,7 +77,7 @@ export function ExportMenu({ plan }: { plan: Plan }) {
   ];
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative hidden sm:block" ref={ref}>
       <Button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}

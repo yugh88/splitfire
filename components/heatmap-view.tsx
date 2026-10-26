@@ -40,10 +40,16 @@ export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
   return (
     <div className="space-y-4 p-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="text-muted-foreground max-w-xl text-sm">
-          The model&apos;s draft plan can have agents fighting over the same files. Splitfire&apos;s
-          deterministic partitioner repairs it before a single agent starts.
-        </p>
+        <div>
+          <p className="font-heading text-fire-orange text-[10px] tracking-widest">
+            THE DEMO MOMENT
+          </p>
+          <h2 className="font-heading mt-1 mb-2 text-2xl">COLLISION HEATMAP</h2>
+          <p className="text-muted-foreground max-w-xl text-sm">
+            The model&apos;s draft plan can have agents fighting over the same files.
+            Splitfire&apos;s deterministic partitioner repairs it before a single agent starts.
+          </p>
+        </div>
         <div className="border-border bg-background/40 flex items-center gap-4 rounded-xl border px-4 py-2">
           <Score label="Draft" value={partitioned.collisionScoreBefore} tone="text-fire-red" />
           <ArrowRight className="text-muted-foreground size-4" />

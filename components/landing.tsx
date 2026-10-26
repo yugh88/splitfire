@@ -11,16 +11,22 @@ import { cn } from "@/lib/utils";
 
 export const REPO_URL = "https://github.com/yugh88/splitfire";
 
+/** Used by the "Try" chips when the repo box is empty: a Next.js app with auth and REST routes. */
+export const DEMO_REPO = "https://github.com/shadcn-ui/taxonomy";
+
 export const EXAMPLES = [
   {
-    label: "zustand · encrypted persist",
-    repo: "https://github.com/pmndrs/zustand",
-    request: "Add an encrypted storage option to the persist middleware, with tests and docs",
+    label: "Add OAuth login",
+    request: "Add GitHub and Google OAuth login with account linking and a sign-in page",
   },
   {
-    label: "hono · rate limiter",
-    repo: "https://github.com/honojs/hono",
-    request: "Add a rate-limit middleware with pluggable stores, plus tests and docs",
+    label: "Add i18n (Hindi + English)",
+    request:
+      "Add i18n with Hindi and English translations, a language switcher and localized routes",
+  },
+  {
+    label: "Migrate REST → tRPC",
+    request: "Migrate the REST API routes to tRPC with typed procedures and update the callers",
   },
 ];
 
@@ -153,7 +159,11 @@ export function Landing({ values, onChange, onSubmit, error }: Props) {
                   key={ex.label}
                   type="button"
                   onClick={() => {
-                    const next = { ...values, repo: ex.repo, request: ex.request };
+                    const next = {
+                      ...values,
+                      repo: values.repo.trim() || DEMO_REPO,
+                      request: ex.request,
+                    };
                     onChange(next);
                     onSubmit(next);
                   }}

@@ -53,8 +53,8 @@ export function Planner() {
               {state.error?.message}
             </span>
           )}
-          <Button variant="outline" onClick={back}>
-            <RotateCcw /> Re-split
+          <Button variant="outline" onClick={back} aria-label="Re-split">
+            <RotateCcw /> <span className="hidden sm:inline">Re-split</span>
           </Button>
           {state.report && <ShareButton plan={state.report.plan} />}
           {state.report && <ExportMenu plan={state.report.plan} />}

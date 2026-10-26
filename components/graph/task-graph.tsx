@@ -16,7 +16,7 @@ import { type GraphModel, MERGE_ID } from "@/lib/client/graph-model";
 import { layoutGraph, type Positions } from "@/lib/client/layout";
 import { MergeTarget, TaskNode, WaveLabel } from "./task-node";
 
-const TASK = { width: 228, height: 108 };
+const TASK = { width: 268, height: 124 };
 const MERGE = { width: 120, height: 56 };
 const nodeTypes = { task: TaskNode, wave: WaveLabel, merge: MergeTarget };
 
@@ -54,7 +54,7 @@ function Flow({ model, agents, lit, selected, onSelect, vertical = false }: Prop
       if (cancelled) return;
       setPositions(next);
       requestAnimationFrame(() =>
-        fitView({ padding: 0.12, duration: 400, maxZoom: 1, minZoom: 0.6 }),
+        fitView({ padding: 0.1, duration: 400, maxZoom: 1, minZoom: 0.8 }),
       );
     });
     return () => {

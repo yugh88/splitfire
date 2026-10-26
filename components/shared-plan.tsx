@@ -18,8 +18,13 @@ export function SharedPlan({ report }: { report: PlanReport }) {
       agents={plan.agents}
       actions={
         <>
-          <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
-            <Flame /> Plan your own
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/" />}
+            aria-label="Plan your own"
+          >
+            <Flame /> <span className="hidden sm:inline">Plan your own</span>
           </Button>
           <ShareButton plan={plan} />
           <ExportMenu plan={plan} />

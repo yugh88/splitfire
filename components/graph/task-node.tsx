@@ -22,7 +22,7 @@ export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 24 }}
       className={cn(
-        "bg-card relative w-[228px] cursor-pointer rounded-lg border p-3 text-left transition-[box-shadow,border-color] duration-500",
+        "bg-card relative w-[268px] cursor-pointer rounded-lg border p-3 text-left transition-[box-shadow,border-color] duration-500",
         kind.border,
         data.selected && "border-fire-amber border-2 shadow-[0_0_28px_-6px_var(--fire-amber)]",
         !data.selected && data.lit && "shadow-[0_0_22px_-8px_var(--fire-orange)]",
@@ -35,7 +35,7 @@ export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
         position={data.vertical ? Position.Top : Position.Left}
         className="!opacity-0"
       />
-      <div className="mb-1 flex items-center justify-between gap-2 font-mono text-[11px]">
+      <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-xs">
         <span className={kind.text}>
           {data.label} · {data.kind.toUpperCase()}
         </span>
@@ -43,8 +43,8 @@ export function TaskNode({ data }: NodeProps<TaskFlowNode>) {
           <span className="text-muted-foreground">{data.estMinutes} min</span>
         )}
       </div>
-      <div className="line-clamp-2 text-sm leading-snug font-semibold">{data.title}</div>
-      <div className="mt-2 flex items-center gap-2 text-[11px]">
+      <div className="line-clamp-2 text-base leading-snug font-semibold">{data.title}</div>
+      <div className="mt-2.5 flex items-center gap-2 text-xs">
         <span className={cn("rounded-full border px-2 py-px", kind.border, kind.bg, kind.text)}>
           {data.files} file{data.files === 1 ? "" : "s"} owned
         </span>
