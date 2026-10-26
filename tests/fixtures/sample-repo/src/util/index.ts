@@ -1,0 +1,1 @@
+export { shout } from "./strings";

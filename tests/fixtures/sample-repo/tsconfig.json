@@ -1,0 +1,8 @@
+{
+  // path aliases, with a comment and a trailing comma
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"], },
+  },
+}
