@@ -3,6 +3,7 @@ import type { RepoRef } from "@/lib/ingest/repo-url";
 import { kv, type KV } from "@/lib/store/kv";
 import type { FileNode, ImportEdge } from "@/lib/types";
 import { buildImportGraph, type ImportGraph } from "./graph";
+import { detectTooling, type Tooling } from "./tooling";
 
 /** Everything downstream modules need about a repo. Holds no source code (privacy). */
 export type RepoAnalysis = {
@@ -12,6 +13,7 @@ export type RepoAnalysis = {
   edges: ImportEdge[];
   symbols: Record<string, string[]>;
   parser: ImportGraph["parser"];
+  tooling: Tooling;
   skipped: number;
   truncated: boolean;
 };
@@ -48,6 +50,7 @@ export async function loadRepoAnalysis(
     edges: graph.edges,
     symbols: graph.symbols,
     parser: graph.parser,
+    tooling: detectTooling(snapshot.treePaths, snapshot.contents),
     skipped: snapshot.skipped,
     truncated: snapshot.truncated,
   };

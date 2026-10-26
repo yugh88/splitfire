@@ -8,6 +8,8 @@ export type RepoSnapshot = {
   sha: string;
   files: FileNode[];
   contents: Record<string, string>;
+  /** Every blob path in the tree, including skipped files (used to detect tooling). */
+  treePaths: string[];
   skipped: number;
   truncated: boolean;
 };
@@ -67,7 +69,16 @@ export async function fetchSnapshot(
     contents[file.path] = await raw(owner, repo, sha, file.path, opts);
   });
 
-  return { owner, repo, sha, files, contents, skipped, truncated };
+  return {
+    owner,
+    repo,
+    sha,
+    files,
+    contents,
+    treePaths: entries.map((e) => e.path),
+    skipped,
+    truncated,
+  };
 }
 
 async function api<T>(path: string, opts: GithubOptions): Promise<T> {

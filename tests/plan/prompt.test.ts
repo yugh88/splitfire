@@ -25,6 +25,7 @@ describe("buildPrompt", () => {
       edges: files.slice(1).map((f, i) => ({ from: f.path, to: files[i]!.path })),
       symbols: {},
       parser: "tree-sitter",
+      tooling: { packageManager: null, scripts: [], testRunner: null, typescript: true },
       skipped: 0,
       truncated: false,
     };

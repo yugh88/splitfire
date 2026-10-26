@@ -141,8 +141,20 @@ const LOW_PRIORITY_DIRS = new Set([
   "fixtures",
 ]);
 
-/** Core source first, then docs/example source, then everything else. */
+/** Root manifests (needed for tooling and aliases) are always kept. */
+const ROOT_MANIFESTS = new Set([
+  "package.json",
+  "tsconfig.json",
+  "jsconfig.json",
+  "pyproject.toml",
+  "setup.py",
+  "setup.cfg",
+  "requirements.txt",
+]);
+
+/** Root manifests, then core source, then docs/example source, then everything else. */
 function rank(path: string): number {
+  if (ROOT_MANIFESTS.has(path)) return -1;
   if (langOf(path) === "other") return 2;
   return path.split("/").some((dir) => LOW_PRIORITY_DIRS.has(dir)) ? 1 : 0;
 }

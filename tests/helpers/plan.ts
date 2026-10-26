@@ -1,5 +1,6 @@
 import type { RepoAnalysis } from "@/lib/analyze/load";
 import { buildImportGraph } from "@/lib/analyze/graph";
+import { detectTooling } from "@/lib/analyze/tooling";
 import { config, type Config } from "@/lib/env";
 import type { TaskProposal } from "@/lib/plan/schema";
 import { loadFixture } from "./fixture";
@@ -36,6 +37,10 @@ export async function fixtureAnalysis(): Promise<RepoAnalysis> {
     edges: graph.edges,
     symbols: graph.symbols,
     parser: graph.parser,
+    tooling: detectTooling(
+      files.map((f) => f.path),
+      contents,
+    ),
     skipped: 0,
     truncated: false,
   };
