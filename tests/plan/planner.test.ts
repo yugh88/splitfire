@@ -68,11 +68,12 @@ describe("proposeTasks", () => {
 
   it("moves to the fallback model, then to the deterministic plan", async () => {
     const fail: LlmResult = { ok: false, error: "bad json", usage: null };
-    const viaFallback = await run([fail, fail, { ok: true, tasks: good, usage }]);
+    const cfg = testConfig({ planMaxCostUsd: 0.5 });
+    const viaFallback = await run([fail, fail, { ok: true, tasks: good, usage }], cfg);
     expect(viaFallback.result.planner).toBe("fallback");
     expect(viaFallback.seen.map((c) => c.model)).toEqual(["big", "big", "backup"]);
 
-    const allFail = await run([fail, fail, fail]);
+    const allFail = await run([fail, fail, fail], cfg);
     expect(allFail.result.planner).toBe("deterministic");
     expect(allFail.result.proposals.length).toBeGreaterThan(0);
     expect(allFail.result.calls).toHaveLength(3);

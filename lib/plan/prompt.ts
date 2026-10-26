@@ -4,7 +4,8 @@ import { MAX_TASKS } from "./schema";
 
 /** Hard cap on the repo map we send (~15k tokens). */
 export const MAX_PROMPT_CHARS = 60_000;
-export const MAX_OUTPUT_TOKENS = 4_000;
+/** Room for reasoning models that spend output tokens thinking before the JSON. */
+export const MAX_OUTPUT_TOKENS = 8_000;
 
 export const SYSTEM_PROMPT = `You are Splitfire's planner. Split a feature request into tasks that separate coding agents can do at the same time in one repo.
 

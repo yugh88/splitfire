@@ -29,6 +29,7 @@ export async function streamTaskProposals(call: LlmCall): Promise<LlmResult> {
     baseURL: call.endpoint.baseURL,
     apiKey: call.endpoint.apiKey,
     includeUsage: true,
+    fetch: withoutThoughts(fetch),
   });
   let streamError: string | null = null;
   const result = streamObject({
@@ -70,4 +71,55 @@ export async function streamTaskProposals(call: LlmCall): Promise<LlmResult> {
 
 function errorMessage(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).slice(0, 1_000);
+}
+
+const THOUGHT_TAG = /<\/?thought>/g;
+
+/**
+ * Some open models (Gemma 4 on the Gemini API) stream their reasoning as ordinary content chunks
+ * flagged `extra_content.google.thought`, and prefix the answer with a stray `</thought>`. This
+ * drops those chunks and tags so only the answer reaches the JSON parser. Other lines pass through.
+ */
+export function cleanSseLine(line: string): string {
+  if (!line.startsWith("data: ") || line === "data: [DONE]") return line;
+  let chunk: unknown;
+  try {
+    chunk = JSON.parse(line.slice(6));
+  } catch {
+    return line;
+  }
+  const choices = (chunk as { choices?: { delta?: Record<string, unknown> }[] }).choices;
+  const delta = choices?.[0]?.delta;
+  if (!delta || typeof delta.content !== "string") return line;
+  const google = (delta.extra_content as { google?: { thought?: boolean } } | undefined)?.google;
+  delta.content = google?.thought ? "" : delta.content.replace(THOUGHT_TAG, "");
+  delete delta.extra_content;
+  return `data: ${JSON.stringify(chunk)}`;
+}
+
+function withoutThoughts(base: typeof fetch): typeof fetch {
+  return async (input, init) => {
+    const res = await base(input, init);
+    if (!res.body || !res.headers.get("content-type")?.includes("text/event-stream")) return res;
+    let buffer = "";
+    const encoder = new TextEncoder();
+    const body = res.body.pipeThrough(new TextDecoderStream()).pipeThrough(
+      new TransformStream<string, Uint8Array>({
+        transform(text, controller) {
+          buffer += text;
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) controller.enqueue(encoder.encode(`${cleanSseLine(line)}\n`));
+        },
+        flush(controller) {
+          if (buffer) controller.enqueue(encoder.encode(cleanSseLine(buffer)));
+        },
+      }),
+    );
+    return new Response(body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+    });
+  };
 }
