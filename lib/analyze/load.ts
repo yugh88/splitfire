@@ -19,6 +19,8 @@ export type RepoAnalysis = {
 export type LoadResult = { analysis: RepoAnalysis; cacheHit: boolean };
 
 const CACHE_TTL_SECONDS = 7 * 24 * 3600;
+/** Branch heads move; re-resolve them every few minutes to save GitHub API calls. */
+const SHA_TTL_SECONDS = 600;
 
 /** Ingests and analyzes a repo, cached by commit SHA under `tree:{owner}/{repo}@{sha}`. */
 export async function loadRepoAnalysis(
@@ -26,7 +28,12 @@ export async function loadRepoAnalysis(
   opts: { token?: string; store?: KV; fetchImpl?: typeof fetch } = {},
 ): Promise<LoadResult> {
   const store = opts.store ?? kv();
-  const sha = await resolveCommit(ref, opts);
+  const shaKey = `sha:${ref.owner}/${ref.repo}:${ref.ref ?? "HEAD"}`;
+  let sha = await store.get<string>(shaKey);
+  if (!sha) {
+    sha = await resolveCommit(ref, opts);
+    await store.set(shaKey, sha, SHA_TTL_SECONDS);
+  }
   const key = `tree:${ref.owner}/${ref.repo}@${sha}`;
 
   const cached = await store.get<RepoAnalysis>(key);

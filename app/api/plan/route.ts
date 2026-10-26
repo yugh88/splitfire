@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AGENT_OPTIONS, DEFAULT_AGENTS } from "@/lib/partition/schedule";
 import type { PlanEvent } from "@/lib/plan/events";
 import { runPlan } from "@/lib/plan/pipeline";
 
@@ -8,6 +9,10 @@ export const maxDuration = 60;
 const BodySchema = z.object({
   repo: z.string().trim().min(3).max(200),
   request: z.string().trim().min(3).max(500),
+  agents: z
+    .number()
+    .refine((n) => (AGENT_OPTIONS as readonly number[]).includes(n))
+    .default(DEFAULT_AGENTS),
 });
 
 export async function POST(req: Request) {

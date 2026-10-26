@@ -39,7 +39,7 @@ describe("runPlan", () => {
       fetchImpl: impl,
       delayMs: 0,
     };
-    const input = { repo: "acme/sample", request: "add user greeting", ip: "1.1.1.1" };
+    const input = { repo: "acme/sample", request: "add user greeting", agents: 4, ip: "1.1.1.1" };
     const events = await collect((emit) => runPlan(input, emit, deps));
 
     const types = events.map((e) => e.type);
@@ -50,7 +50,7 @@ describe("runPlan", () => {
     const done = events.at(-1);
     if (done?.type !== "done") throw new Error("expected done");
     expect(done.data.plan.collisionScore).toBe(0);
-    expect(done.data.plan.id).toBe(planId("acme/sample", "sha1", "add user greeting"));
+    expect(done.data.plan.id).toBe(planId("acme/sample", "sha1", "add user greeting", 4));
     expect(done.data.plan.speedup).toBeGreaterThanOrEqual(1);
 
     const replay = await collect((emit) => runPlan(input, emit, deps));
@@ -60,7 +60,7 @@ describe("runPlan", () => {
 
   it("rejects bad repo input", async () => {
     const events = await collect((emit) =>
-      runPlan({ repo: "not a repo", request: "x y z", ip: "ip" }, emit, {
+      runPlan({ repo: "not a repo", request: "x y z", agents: 4, ip: "ip" }, emit, {
         cfg: testConfig(),
         store: memory(),
       }),
@@ -77,7 +77,11 @@ describe("runPlan", () => {
     const last: PlanEvent[] = [];
     for (let i = 0; i < 6; i++) {
       const events = await collect((emit) =>
-        runPlan({ repo: "acme/sample", request: `request number ${i}`, ip: "9.9.9.9" }, emit, deps),
+        runPlan(
+          { repo: "acme/sample", request: `request number ${i}`, agents: 4, ip: "9.9.9.9" },
+          emit,
+          deps,
+        ),
       );
       last.push(events.at(-1)!);
     }
@@ -87,7 +91,7 @@ describe("runPlan", () => {
 
   it("reports GitHub failures as typed errors", async () => {
     const events = await collect((emit) =>
-      runPlan({ repo: "acme/missing", request: "x y z", ip: "ip" }, emit, {
+      runPlan({ repo: "acme/missing", request: "x y z", agents: 4, ip: "ip" }, emit, {
         cfg: testConfig(),
         store: memory(),
         fetchImpl: fakeFetch({}).impl,

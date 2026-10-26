@@ -11,17 +11,17 @@ import type { Emit, PlanReport } from "./events";
 import { proposeTasks } from "./planner";
 
 /** Bump when planning logic changes so cached plans are not reused. */
-export const SETTINGS_VERSION = "1";
+export const SETTINGS_VERSION = "2";
 
 const PLAN_TTL_SECONDS = 30 * 24 * 3600;
 
-export type PlanInput = { repo: string; request: string; ip: string };
+export type PlanInput = { repo: string; request: string; agents: number; ip: string };
 
 type Deps = { cfg?: Config; store?: KV; fetchImpl?: typeof fetch; delayMs?: number };
 
-export function planId(repo: string, sha: string, request: string): string {
+export function planId(repo: string, sha: string, request: string, agents: number): string {
   return createHash("sha256")
-    .update([repo.toLowerCase(), sha, request.trim(), SETTINGS_VERSION].join("\n"))
+    .update([repo.toLowerCase(), sha, request.trim(), agents, SETTINGS_VERSION].join("\n"))
     .digest("hex")
     .slice(0, 16);
 }
@@ -65,7 +65,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
       data: { files: analysis.files, edges: analysis.edges, parser: analysis.parser },
     });
 
-    const id = planId(analysis.repo, analysis.sha, input.request);
+    const id = planId(analysis.repo, analysis.sha, input.request, input.agents);
     const stored = await store.get<PlanReport>(`plan:${id}`);
     if (stored) {
       log.replay = true;
@@ -102,12 +102,14 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
       analysis,
       request: input.request,
       partition: parts,
+      agents: input.agents,
       cfg,
     });
     emit({
       type: "partitioned",
       data: {
         tasks: plan.tasks,
+        draft: parts.draft,
         collisions: parts.collisions,
         collisionScoreBefore: parts.collisionScoreBefore,
         collisionScore: parts.collisionScore,
@@ -120,6 +122,7 @@ export async function runPlan(input: PlanInput, emit: Emit, deps: Deps = {}): Pr
       plan,
       planner: proposed.planner,
       notice: proposed.notice,
+      draft: parts.draft,
       collisions: parts.collisions,
       collisionScoreBefore: parts.collisionScoreBefore,
       repairs: parts.repairs,
@@ -149,6 +152,7 @@ function replay(report: PlanReport, emit: Emit) {
     type: "partitioned",
     data: {
       tasks: report.plan.tasks,
+      draft: report.draft,
       collisions: report.collisions,
       collisionScoreBefore: report.collisionScoreBefore,
       collisionScore: report.plan.collisionScore,

@@ -1,7 +1,7 @@
 import type { RepoAnalysis } from "@/lib/analyze/load";
 
 const STOPWORDS = new Set(
-  "the and for with that this from into add adds make makes use using support new feature should can will page when then each all any via let lets user users".split(
+  "the and for with that this from into add adds make makes use using support new feature should can will when then each all any via let lets plus also option options test tests docs doc documentation page".split(
     " ",
   ),
 );

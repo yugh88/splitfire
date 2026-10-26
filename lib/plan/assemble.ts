@@ -13,6 +13,7 @@ export function assemblePlan(args: {
   analysis: RepoAnalysis;
   request: string;
   partition: Partition;
+  agents: number;
   cfg: Config;
 }): { plan: Plan; metrics: Metrics } {
   const { analysis, partition, cfg } = args;
@@ -23,7 +24,7 @@ export function assemblePlan(args: {
     acceptance: [],
   }));
 
-  const s = schedule(tasks);
+  const s = schedule(tasks, args.agents);
   const repoTokens = estimateTokens(analysis.files.reduce((n, f) => n + f.bytes, 0));
   const planMetrics = {
     collisionScore: partition.collisionScore,

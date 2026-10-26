@@ -32,6 +32,6 @@ describe("loadRepoAnalysis", () => {
     const second = await loadRepoAnalysis(ref, { store, fetchImpl: impl });
     expect(second.cacheHit).toBe(true);
     expect(second.analysis).toEqual(first.analysis);
-    expect(calls.length - before).toBe(2); // only the sha lookup
+    expect(calls.length - before).toBe(0); // sha resolution is cached too
   });
 });
