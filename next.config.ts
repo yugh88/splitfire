@@ -1,6 +1,8 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.resolve("."),
   // web-tree-sitter loads its WASM at runtime; keep it unbundled and ship the grammars.
   serverExternalPackages: ["web-tree-sitter"],
   outputFileTracingIncludes: {
