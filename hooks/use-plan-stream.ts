@@ -10,7 +10,7 @@ export function usePlanStream() {
   const [state, dispatch] = useReducer(planReducer, initialPlanState);
   const abort = useRef<AbortController | null>(null);
 
-  const start = useCallback(async (repo: string, request: string) => {
+  const start = useCallback(async (repo: string, request: string, agents: number) => {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
@@ -20,7 +20,7 @@ export function usePlanStream() {
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repo, request }),
+        body: JSON.stringify({ repo, request, agents }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {
@@ -46,5 +46,10 @@ export function usePlanStream() {
     }
   }, []);
 
-  return { state, start };
+  const reset = useCallback(() => {
+    abort.current?.abort();
+    dispatch({ type: "reset" });
+  }, []);
+
+  return { state, start, reset };
 }

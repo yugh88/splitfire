@@ -16,7 +16,10 @@ export type PlanState = {
 };
 
 export type PlanAction =
-  { type: "start" } | { type: "event"; event: PlanEvent } | { type: "fail"; message: string };
+  | { type: "start" }
+  | { type: "reset" }
+  | { type: "event"; event: PlanEvent }
+  | { type: "fail"; message: string };
 
 export const initialPlanState: PlanState = {
   stage: "idle",
@@ -32,6 +35,7 @@ export const initialPlanState: PlanState = {
 
 export function planReducer(state: PlanState, action: PlanAction): PlanState {
   if (action.type === "start") return { ...initialPlanState, stage: "ingesting" };
+  if (action.type === "reset") return initialPlanState;
   if (action.type === "fail") {
     return { ...state, stage: "error", error: { code: "network", message: action.message } };
   }
@@ -75,6 +79,7 @@ export function stateFromReport(report: PlanReport): PlanState {
     proposals: [],
     partitioned: {
       tasks: plan.tasks,
+      draft: report.draft,
       collisions: report.collisions,
       collisionScoreBefore: report.collisionScoreBefore,
       collisionScore: plan.collisionScore,

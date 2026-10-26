@@ -72,6 +72,7 @@ describe("stateFromReport", () => {
       },
       planner: "llm",
       notice: null,
+      draft: [],
       collisions: [{ file: "x", tasks: ["a", "b"] }],
       collisionScoreBefore: 1,
       repairs: [],

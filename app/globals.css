@@ -9,6 +9,8 @@
   --color-fire-amber: var(--fire-amber);
   --color-fire-orange: var(--fire-orange);
   --color-fire-red: var(--fire-red);
+  --color-ok-green: var(--ok-green);
+  --color-contract-blue: var(--contract-blue);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
@@ -87,40 +89,42 @@
 }
 
 .dark {
-  --background: oklch(0.145 0.006 50);
-  --foreground: oklch(0.97 0.006 70);
-  --card: oklch(0.185 0.008 50);
-  --card-foreground: oklch(0.97 0.006 70);
-  --popover: oklch(0.185 0.008 50);
-  --popover-foreground: oklch(0.97 0.006 70);
-  --primary: oklch(0.72 0.19 50);
-  --primary-foreground: oklch(0.16 0.02 50);
-  --secondary: oklch(0.25 0.01 50);
-  --secondary-foreground: oklch(0.97 0.006 70);
-  --muted: oklch(0.25 0.01 50);
-  --muted-foreground: oklch(0.72 0.015 60);
-  --accent: oklch(0.27 0.02 50);
-  --accent-foreground: oklch(0.97 0.006 70);
-  --destructive: oklch(0.65 0.22 27);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 13%);
-  --ring: oklch(0.8 0.16 75);
-  --chart-1: oklch(0.85 0.16 85);
-  --chart-2: oklch(0.72 0.19 50);
-  --chart-3: oklch(0.65 0.22 27);
-  --chart-4: oklch(0.55 0.2 20);
-  --chart-5: oklch(0.45 0.15 20);
-  --sidebar: oklch(0.185 0.008 50);
-  --sidebar-foreground: oklch(0.97 0.006 70);
-  --sidebar-primary: oklch(0.72 0.19 50);
-  --sidebar-primary-foreground: oklch(0.16 0.02 50);
-  --sidebar-accent: oklch(0.27 0.02 50);
-  --sidebar-accent-foreground: oklch(0.97 0.006 70);
-  --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.8 0.16 75);
-  --fire-amber: oklch(0.85 0.16 85);
-  --fire-orange: oklch(0.72 0.19 50);
-  --fire-red: oklch(0.65 0.22 27);
+  --background: #070b14;
+  --foreground: #e6e9f0;
+  --card: #0d1322;
+  --card-foreground: #e6e9f0;
+  --popover: #0d1322;
+  --popover-foreground: #e6e9f0;
+  --primary: #ff6a2b;
+  --primary-foreground: #160a04;
+  --secondary: #141b2d;
+  --secondary-foreground: #e6e9f0;
+  --muted: #141b2d;
+  --muted-foreground: #94a0b8;
+  --accent: #18213a;
+  --accent-foreground: #e6e9f0;
+  --destructive: #f05252;
+  --border: #1d263b;
+  --input: #222c44;
+  --ring: #fbbf24;
+  --chart-1: #fbbf24;
+  --chart-2: #ff6a2b;
+  --chart-3: #f05252;
+  --chart-4: #34d399;
+  --chart-5: #38bdf8;
+  --sidebar: #0d1322;
+  --sidebar-foreground: #e6e9f0;
+  --sidebar-primary: #ff6a2b;
+  --sidebar-primary-foreground: #160a04;
+  --sidebar-accent: #18213a;
+  --sidebar-accent-foreground: #e6e9f0;
+  --sidebar-border: #1d263b;
+  --sidebar-ring: #fbbf24;
+  --fire-amber: #fbbf24;
+  --fire-orange: #ff6a2b;
+  --fire-red: #f05252;
+  --ok-green: #34d399;
+  --contract-blue: #38bdf8;
 }
 
 @layer base {
@@ -135,17 +139,45 @@
   }
 }
 
-/* Dark grid background with a warm glow at the top. */
+/* Dark grid background with a faint glow at the top. */
 .bg-grid {
   background-color: var(--background);
   background-image:
-    radial-gradient(ellipse 80% 40% at 50% -10%, oklch(0.72 0.19 50 / 18%), transparent 70%),
-    linear-gradient(oklch(1 0 0 / 4%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 4%) 1px, transparent 1px);
+    radial-gradient(ellipse 70% 35% at 50% -5%, rgb(255 106 43 / 10%), transparent 70%),
+    linear-gradient(rgb(148 160 184 / 5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 160 184 / 5%) 1px, transparent 1px);
   background-size:
     100% 100%,
-    24px 24px,
-    24px 24px;
+    32px 32px,
+    32px 32px;
+}
+
+.glow-amber {
+  text-shadow: 0 0 18px rgb(251 191 36 / 55%);
+}
+
+.glow-button {
+  box-shadow: 0 0 24px -4px rgb(255 106 43 / 70%);
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px);
+  }
+}
+
+.pixel-ember {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  animation: twinkle 4s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .text-fire {
@@ -178,7 +210,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ember {
+  .ember,
+  .pixel-ember {
     display: none;
   }
 }
@@ -186,7 +219,7 @@
 /* React Flow chrome in the fire theme. */
 .react-flow {
   --xy-background-color: transparent;
-  --xy-edge-stroke: oklch(1 0 0 / 22%);
+  --xy-edge-stroke: #334058;
   --xy-controls-button-background-color: var(--card);
   --xy-controls-button-background-color-hover: var(--accent);
   --xy-controls-button-color: var(--foreground);
