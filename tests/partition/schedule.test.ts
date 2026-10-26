@@ -43,10 +43,14 @@ describe("schedule", () => {
     expect(s.speedup).toBe(3.3);
   });
 
-  it("caps agents at four", () => {
-    const s = schedule(Array.from({ length: 8 }, (_, i) => j(`t${i}`, 10)));
-    expect(s.agents).toBe(4);
-    expect(s.parallelMinutes).toBe(20);
-    expect(s.speedup).toBe(4);
+  it("caps agents at the chosen count (default four)", () => {
+    const jobs = Array.from({ length: 8 }, (_, i) => j(`t${i}`, 10));
+    expect(schedule(jobs)).toMatchObject({ agents: 4, parallelMinutes: 20, speedup: 4 });
+    expect(schedule(jobs, 8)).toMatchObject({ agents: 8, parallelMinutes: 10, speedup: 8 });
+    expect(schedule(jobs, 2)).toMatchObject({ agents: 2, parallelMinutes: 40, speedup: 2 });
+  });
+
+  it("never reports more agents than can work at once", () => {
+    expect(schedule([j("a", 10), j("b", 10, ["a"])], 8).agents).toBe(1);
   });
 });

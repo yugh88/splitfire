@@ -9,13 +9,17 @@ import {
   findCollisions,
   normalizeProposals,
 } from "./ownership";
+import type { Repair } from "./repairs";
+
+export type DraftSummary = Pick<DraftTask, "id" | "title" | "ownedFiles">;
 
 export type Partition = {
   tasks: DraftTask[];
+  draft: DraftSummary[]; // proposals after id/path normalization, before repair
   collisions: Collision[]; // as proposed, before repair (drives the heatmap)
   collisionScoreBefore: number;
   collisionScore: number;
-  repairs: string[];
+  repairs: Repair[];
 };
 
 /** Proposals in, collision-free DAG out. Pure and deterministic. */
@@ -26,6 +30,7 @@ export function partition(proposals: TaskProposal[], edges: ImportEdge[]): Parti
   const dag = repairDependencies(owned.tasks);
   return {
     tasks: dag.tasks,
+    draft: normalized.map(({ id, title, ownedFiles }) => ({ id, title, ownedFiles })),
     collisions,
     collisionScoreBefore: collisionScore(normalized),
     collisionScore: collisionScore(dag.tasks),

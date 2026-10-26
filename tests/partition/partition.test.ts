@@ -19,6 +19,10 @@ describe("partition", () => {
     );
     expect(result.collisionScoreBefore).toBe(1);
     expect(result.collisions).toEqual([{ file: "shared.ts", tasks: ["a", "b"] }]);
+    expect(result.draft.map((d) => d.ownedFiles)).toEqual([
+      ["x.ts", "shared.ts"],
+      ["y.ts", "shared.ts"],
+    ]);
     expect(result.collisionScore).toBe(0);
     expect(isAcyclic(result.tasks)).toBe(true);
     expect(result.repairs.length).toBeGreaterThanOrEqual(2);

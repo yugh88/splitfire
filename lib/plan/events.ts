@@ -1,4 +1,6 @@
+import type { DraftSummary } from "@/lib/partition";
 import type { Collision } from "@/lib/partition/ownership";
+import type { Repair } from "@/lib/partition/repairs";
 import type { FileNode, ImportEdge, Plan, PlanEventType, Task } from "@/lib/types";
 import type { TaskProposal } from "./schema";
 
@@ -21,9 +23,10 @@ export type PlanReport = {
   plan: Plan;
   planner: PlannerKind;
   notice: string | null;
+  draft: DraftSummary[];
   collisions: Collision[];
   collisionScoreBefore: number;
-  repairs: string[];
+  repairs: Repair[];
   criticalPath: string[];
 };
 
@@ -40,10 +43,11 @@ type Payloads = {
   task: { attempt: number; task: TaskProposal };
   partitioned: {
     tasks: Task[];
+    draft: DraftSummary[];
     collisions: Collision[];
     collisionScoreBefore: number;
     collisionScore: number;
-    repairs: string[];
+    repairs: Repair[];
   };
   metrics: Metrics;
   done: PlanReport;

@@ -75,7 +75,7 @@ describe("assignOwnership", () => {
     const a = tasks.find((t) => t.id === "a")!;
     expect(a.ownedFiles).toEqual(["a1.ts"]);
     expect(a.readFiles).toEqual(["shared.ts"]);
-    expect(repairs).toEqual(["shared.ts: owned by b; a reads it"]);
+    expect(repairs).toEqual([{ kind: "owner", file: "shared.ts", winner: "b", loser: "a" }]);
     expect(collisionScore(tasks)).toBe(0);
   });
 
@@ -95,6 +95,6 @@ describe("assignOwnership", () => {
     );
     expect(tasks.map((t) => t.id)).toEqual(["base", "ui"]);
     expect(tasks[1]!.dependsOn).toEqual(["base"]);
-    expect(repairs).toContain("dup: dropped, all its files went to other tasks");
+    expect(repairs).toContainEqual({ kind: "dropped", task: "dup" });
   });
 });

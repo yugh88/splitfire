@@ -1,6 +1,7 @@
 import { DirectedGraph } from "graphology";
 import { hasCycle, topologicalSort } from "graphology-dag";
 import type { DraftTask } from "./ownership";
+import type { Repair } from "./repairs";
 
 type Deps = Pick<DraftTask, "id" | "dependsOn">;
 
@@ -28,14 +29,20 @@ export function topoOrder(tasks: Deps[]): string[] {
  * Drops unknown and self dependencies, then removes back-edges found by a DFS in task order,
  * which makes the dependency graph a DAG deterministically.
  */
-export function repairDependencies<T extends Deps>(tasks: T[]): { tasks: T[]; repairs: string[] } {
+export function repairDependencies<T extends Deps>(tasks: T[]): { tasks: T[]; repairs: Repair[] } {
   const ids = new Set(tasks.map((t) => t.id));
-  const repairs: string[] = [];
+  const repairs: Repair[] = [];
   const deps = new Map(
     tasks.map((t) => {
       const valid = t.dependsOn.filter((d) => {
         const ok = d !== t.id && ids.has(d);
-        if (!ok) repairs.push(`${t.id}: removed invalid dependency on ${d}`);
+        if (!ok) {
+          repairs.push(
+            d === t.id
+              ? { kind: "self-dep", task: t.id }
+              : { kind: "unknown-dep", task: t.id, dep: d },
+          );
+        }
         return ok;
       });
       return [t.id, valid];
@@ -51,7 +58,7 @@ export function repairDependencies<T extends Deps>(tasks: T[]): { tasks: T[]; re
           id,
           (deps.get(id) ?? []).filter((d) => d !== dep),
         );
-        repairs.push(`${id}: removed dependency on ${dep} to break a cycle`);
+        repairs.push({ kind: "cycle", task: id, dep });
       } else if (!state.has(dep)) {
         visit(dep);
       }

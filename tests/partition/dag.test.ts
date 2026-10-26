@@ -7,14 +7,17 @@ describe("repairDependencies", () => {
   it("drops unknown and self dependencies", () => {
     const { tasks, repairs } = repairDependencies([t("a", ["a", "ghost"]), t("b", ["a"])]);
     expect(tasks).toEqual([t("a"), t("b", ["a"])]);
-    expect(repairs).toHaveLength(2);
+    expect(repairs).toEqual([
+      { kind: "self-dep", task: "a" },
+      { kind: "unknown-dep", task: "a", dep: "ghost" },
+    ]);
   });
 
   it("breaks a two-task cycle deterministically", () => {
     const { tasks, repairs } = repairDependencies([t("a", ["b"]), t("b", ["a"])]);
     expect(isAcyclic(tasks)).toBe(true);
     expect(tasks).toEqual([t("a", ["b"]), t("b")]);
-    expect(repairs).toEqual(["b: removed dependency on a to break a cycle"]);
+    expect(repairs).toEqual([{ kind: "cycle", task: "b", dep: "a" }]);
   });
 
   it("breaks longer cycles and keeps acyclic edges", () => {

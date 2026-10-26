@@ -2,7 +2,8 @@ import { topoOrder } from "./dag";
 
 type Job = { id: string; dependsOn: string[]; estMinutes: number };
 
-export const MAX_AGENTS = 4;
+export const AGENT_OPTIONS = [2, 4, 6, 8] as const;
+export const DEFAULT_AGENTS = 4;
 
 export type Schedule = {
   serialMinutes: number;
@@ -80,11 +81,11 @@ export function simulate(jobs: Job[], agents: number): { makespan: number; peak:
   return { makespan: now, peak };
 }
 
-/** Serial effort vs. parallel makespan with up to MAX_AGENTS agents. */
-export function schedule(jobs: Job[]): Schedule {
+/** Serial effort vs. parallel makespan with up to `maxAgents` agents. */
+export function schedule(jobs: Job[], maxAgents: number = DEFAULT_AGENTS): Schedule {
   const serialMinutes = jobs.reduce((sum, j) => sum + j.estMinutes, 0);
   const cp = criticalPath(jobs);
-  const agents = Math.max(1, Math.min(MAX_AGENTS, simulate(jobs, jobs.length).peak));
+  const agents = Math.max(1, Math.min(maxAgents, simulate(jobs, jobs.length).peak));
   const parallelMinutes = simulate(jobs, agents).makespan;
   return {
     serialMinutes,

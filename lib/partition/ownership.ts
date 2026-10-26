@@ -1,5 +1,6 @@
 import type { TaskProposal } from "@/lib/plan/schema";
 import type { ImportEdge, Task } from "@/lib/types";
+import type { Repair } from "./repairs";
 
 /** A task after partitioning, before cost/model estimates are attached. */
 export type DraftTask = Pick<
@@ -58,7 +59,7 @@ export function normalizeProposals(proposals: TaskProposal[]): DraftTask[] {
 export function assignOwnership(
   tasks: DraftTask[],
   edges: ImportEdge[],
-): { tasks: DraftTask[]; repairs: string[] } {
+): { tasks: DraftTask[]; repairs: Repair[] } {
   const neighbors = new Map<string, Set<string>>();
   const link = (a: string, b: string) => neighbors.set(a, (neighbors.get(a) ?? new Set()).add(b));
   for (const e of edges) {
@@ -68,7 +69,7 @@ export function assignOwnership(
 
   const order = new Map(tasks.map((t, i) => [t.id, i]));
   const byId = new Map(tasks.map((t) => [t.id, { ...t, ownedFiles: [...t.ownedFiles] }]));
-  const repairs: string[] = [];
+  const repairs: Repair[] = [];
 
   for (const { file, tasks: claimants } of findCollisions(tasks)) {
     const affinity = (id: string) => {
@@ -83,7 +84,7 @@ export function assignOwnership(
       if (!task || id === winner) continue;
       task.ownedFiles = task.ownedFiles.filter((f) => f !== file);
       task.readFiles = unique([...task.readFiles, file]);
-      repairs.push(`${file}: owned by ${winner}; ${id} reads it`);
+      repairs.push({ kind: "owner", file, winner, loser: id });
     }
   }
 
@@ -91,8 +92,9 @@ export function assignOwnership(
   const dropped = new Map(
     [...byId.values()].filter((t) => t.ownedFiles.length === 0).map((t) => [t.id, t.dependsOn]),
   );
-  for (const id of dropped.keys())
-    repairs.push(`${id}: dropped, all its files went to other tasks`);
+  for (const id of dropped.keys()) {
+    repairs.push({ kind: "dropped", task: id });
+  }
   for (const task of kept)
     task.dependsOn = unique(task.dependsOn.flatMap((d) => inherit(d, dropped)));
 
