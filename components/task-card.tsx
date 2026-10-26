@@ -1,117 +1,119 @@
 "use client";
 
-import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Check, Eye, Lock, X } from "lucide-react";
+import { KIND } from "@/components/kind";
 import { Button } from "@/components/ui/button";
-import type { Collision } from "@/lib/partition/ownership";
-import { formatMinutes, formatTokens, formatUsd } from "@/lib/format";
+import { modelTier } from "@/lib/cost/estimate";
+import { formatUsd } from "@/lib/format";
 import type { Task } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-type Props = { task: Task; collisions: Collision[]; repairs: string[]; onClose: () => void };
+type Props = { task: Task; labels: Map<string, string>; onClose?: () => void };
 
-export function TaskCard({ task, collisions, repairs, onClose }: Props) {
-  const contested = new Set(collisions.filter((c) => c.tasks.includes(task.id)).map((c) => c.file));
-  const notes = repairs.filter((r) => r.includes(task.id));
+export function TaskCard({ task, labels, onClose }: Props) {
+  const kind = KIND[task.kind];
   return (
     <article
       className="border-border bg-card rounded-xl border p-4"
       aria-label={`Task ${task.title}`}
     >
-      <header className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="font-heading text-[9px] uppercase">
-              {task.kind}
-            </Badge>
-            <code className="text-muted-foreground text-xs">{task.id}</code>
-          </div>
-          <h3 className="text-base font-semibold">{task.title}</h3>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close task details">
-          <X />
-        </Button>
+      <header className="mb-2 flex items-start justify-between gap-3">
+        <span
+          className={cn(
+            "rounded-md border px-2 py-0.5 font-mono text-xs",
+            kind.border,
+            kind.bg,
+            kind.text,
+          )}
+        >
+          {labels.get(task.id)} · {task.kind.toUpperCase()}
+        </span>
+        {onClose && (
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close task details">
+            <X />
+          </Button>
+        )}
       </header>
-      <p className="text-muted-foreground mb-4 text-sm">{task.goal}</p>
+      <h3 className="text-xl font-semibold">{task.title}</h3>
+      <p className="text-muted-foreground mt-1 mb-4 text-sm">{task.goal}</p>
 
-      <dl className="mb-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-        <Fact label="Model" value={task.model} />
-        <Fact label="Time" value={formatMinutes(task.estMinutes)} />
-        <Fact label="Tokens" value={formatTokens(task.estTokens)} />
-        <Fact label="Cost" value={formatUsd(task.estCostUsd)} />
+      <dl className="mb-4 grid grid-cols-3 gap-2 text-sm">
+        <Fact label="Model" value={`${modelTier(task.difficulty)} model`} title={task.model} />
+        <Fact label="Est. time" value={`${task.estMinutes} min`} />
+        <Fact label="Est. cost" value={formatUsd(task.estCostUsd)} />
       </dl>
 
-      <FileList title="Owns (exclusive)" files={task.ownedFiles} hot={contested} />
+      <Section title="Owns (exclusive)">
+        {task.ownedFiles.map((f) => (
+          <FileRow key={f} file={f} icon={<Lock className="size-3.5 shrink-0" />} owned />
+        ))}
+      </Section>
       {task.readFiles.length > 0 && (
-        <FileList title="Reads (context only)" files={task.readFiles} />
-      )}
-      {task.dependsOn.length > 0 && (
-        <Section title="Waits for">
-          <div className="flex flex-wrap gap-1">
-            {task.dependsOn.map((d) => (
-              <code key={d} className="bg-muted rounded px-1.5 py-0.5 text-xs">
-                {d}
-              </code>
-            ))}
-          </div>
+        <Section title="Context pack (read-only)">
+          {task.readFiles.map((f) => (
+            <FileRow key={f} file={f} icon={<Eye className="size-3.5 shrink-0" />} />
+          ))}
         </Section>
       )}
       {task.acceptance.length > 0 && (
         <Section title="Done when">
-          <ul className="text-muted-foreground list-inside list-disc text-xs">
+          <ul className="space-y-1">
             {task.acceptance.map((a) => (
-              <li key={a}>
-                <code>{a}</code>
+              <li key={a} className="flex items-start gap-2 font-mono text-xs">
+                <span className="border-ok-green/60 text-ok-green mt-px flex size-4 shrink-0 items-center justify-center rounded border">
+                  <Check className="size-3" />
+                </span>
+                {a}
               </li>
             ))}
           </ul>
         </Section>
       )}
-      {notes.length > 0 && (
-        <Section title="Repairs">
-          <ul className="text-muted-foreground text-xs">
-            {notes.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        </Section>
+      {task.dependsOn.length > 0 && (
+        <p className="text-muted-foreground text-xs">
+          Depends on:{" "}
+          <span className="font-mono">
+            {task.dependsOn.map((d) => labels.get(d) ?? d).join(", ")}
+          </span>
+        </p>
       )}
     </article>
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div className="bg-muted/60 rounded-md px-2 py-1.5">
-      <dt className="text-muted-foreground text-[10px] uppercase">{label}</dt>
-      <dd className="truncate font-medium" title={value}>
-        {value}
-      </dd>
+    <div className="border-border bg-background/40 rounded-lg border px-3 py-2" title={title}>
+      <dt className="text-muted-foreground text-[10px] tracking-wider uppercase">{label}</dt>
+      <dd className="truncate font-semibold">{value}</dd>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-3">
-      <h4 className="font-heading text-muted-foreground mb-1 text-[10px] tracking-widest uppercase">
+    <section className="mb-4">
+      <h4 className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
         {title}
       </h4>
-      {children}
+      <div className="max-h-48 space-y-1.5 overflow-auto">{children}</div>
     </section>
   );
 }
 
-function FileList({ title, files, hot }: { title: string; files: string[]; hot?: Set<string> }) {
+function FileRow({ file, icon, owned }: { file: string; icon: React.ReactNode; owned?: boolean }) {
   return (
-    <Section title={title}>
-      <ul className="max-h-40 space-y-0.5 overflow-auto text-xs">
-        {files.map((f) => (
-          <li key={f} className="truncate font-mono" title={f}>
-            {hot?.has(f) ? <span className="text-fire-red">● </span> : null}
-            {f}
-          </li>
-        ))}
-      </ul>
-    </Section>
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-md border px-2.5 py-1.5 font-mono text-xs",
+        owned
+          ? "border-fire-amber/30 bg-fire-amber/5 text-fire-amber"
+          : "border-border bg-background/40 text-foreground",
+      )}
+      title={file}
+    >
+      {icon}
+      <span className="truncate">{file}</span>
+    </div>
   );
 }

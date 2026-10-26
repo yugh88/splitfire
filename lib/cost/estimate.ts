@@ -11,8 +11,14 @@ const TURNS: Record<Task["difficulty"], number> = { 1: 3, 2: 5, 3: 8 };
 const BASE_MINUTES: Record<Task["difficulty"], number> = { 1: 8, 2: 15, 3: 25 };
 
 /** Small model for easy tasks, strong model for hard ones. */
+export function modelTier(difficulty: number): "strong" | "fast" {
+  return difficulty >= 3 ? "strong" : "fast";
+}
+
 export function routeModel(difficulty: Task["difficulty"], cfg: Config): string {
-  return difficulty >= 3 ? cfg.plannerModel || "strong-model" : cfg.fastModel || "fast-model";
+  return modelTier(difficulty) === "strong"
+    ? cfg.plannerModel || "strong-model"
+    : cfg.fastModel || "fast-model";
 }
 
 /** Tokens an agent reads for this task: its files plus the brief. */

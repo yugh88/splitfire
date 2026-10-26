@@ -6,24 +6,27 @@ import {
   BackgroundVariant,
   Controls,
   type Edge,
-  MarkerType,
+  type Node,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
 } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
-import type { GraphModel } from "@/lib/client/graph-model";
+import { type GraphModel, MERGE_ID } from "@/lib/client/graph-model";
 import { layoutGraph, type Positions } from "@/lib/client/layout";
-import { TaskNode, type TaskFlowNode } from "./task-node";
+import { MergeTarget, TaskNode, WaveLabel } from "./task-node";
 
-const NODE_SIZE = { width: 220, height: 104 };
-const nodeTypes = { task: TaskNode };
+const TASK = { width: 228, height: 108 };
+const MERGE = { width: 120, height: 56 };
+const nodeTypes = { task: TaskNode, wave: WaveLabel, merge: MergeTarget };
 
 type Props = {
   model: GraphModel;
+  agents: number;
   lit: Set<string>;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  vertical?: boolean;
 };
 
 export function TaskGraph(props: Props) {
@@ -34,33 +37,25 @@ export function TaskGraph(props: Props) {
   );
 }
 
-function Flow({ model, lit, selected, onSelect }: Props) {
+function Flow({ model, agents, lit, selected, onSelect, vertical = false }: Props) {
   const { fitView } = useReactFlow();
-  const vertical = useNarrow();
   const [positions, setPositions] = useState<Positions>({});
 
-  const layoutKey = useMemo(
-    () =>
-      JSON.stringify([
-        model.nodes.map((n) => n.id),
-        model.edges.filter((e) => e.kind !== "collision").map((e) => e.id),
-        vertical,
-      ]),
-    [model, vertical],
-  );
-
+  const layoutKey = JSON.stringify([
+    model.nodes.map((n) => [n.id, n.wave]),
+    model.edges.map((e) => e.id),
+    vertical,
+  ]);
   useEffect(() => {
     let cancelled = false;
-    const deps = model.edges.filter((e) => e.kind !== "collision");
-    layoutGraph(
-      model.nodes.map((n) => n.id),
-      deps,
-      NODE_SIZE,
-      vertical ? "DOWN" : "RIGHT",
-    ).then((next) => {
+    const nodes = model.nodes.map((n) => ({ id: n.id, column: n.wave, size: TASK }));
+    if (model.merge) nodes.push({ id: MERGE_ID, column: model.waves.length, size: MERGE });
+    layoutGraph(nodes, model.edges, vertical ? "DOWN" : "RIGHT").then((next) => {
       if (cancelled) return;
       setPositions(next);
-      requestAnimationFrame(() => fitView({ padding: 0.15, duration: 400, maxZoom: 1.1 }));
+      requestAnimationFrame(() =>
+        fitView({ padding: 0.12, duration: 400, maxZoom: 1, minZoom: 0.6 }),
+      );
     });
     return () => {
       cancelled = true;
@@ -69,50 +64,59 @@ function Flow({ model, lit, selected, onSelect }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutKey]);
 
-  const nodes: TaskFlowNode[] = model.nodes.map((n, index) => ({
-    id: n.id,
-    type: "task",
-    position: positions[n.id] ?? { x: 0, y: index * (NODE_SIZE.height + 24) },
-    data: { ...n, lit: lit.has(n.id), selected: selected === n.id, vertical, index },
-    draggable: false,
-  }));
-
-  const edges: Edge[] = model.edges.map((e) => {
-    if (e.kind === "collision") {
-      return {
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: "straight",
-        style: { stroke: "var(--fire-red)", strokeDasharray: "6 4", strokeWidth: 2 },
-        label: "clash",
-        labelStyle: { fill: "var(--fire-red)", fontSize: 10 },
-        labelBgStyle: { fill: "var(--card)" },
-      };
+  const nodes = useMemo(() => {
+    const placed = model.nodes.filter((n) => positions[n.id]);
+    const result: Node[] = model.nodes.map((n, i) => ({
+      id: n.id,
+      type: "task",
+      position: positions[n.id] ?? { x: 0, y: i * (TASK.height + 24) },
+      data: { ...n, lit: lit.has(n.id), selected: selected === n.id, vertical },
+      draggable: false,
+    }));
+    for (const wave of model.waves) {
+      const members = placed.filter((n) => n.wave === wave.index).map((n) => positions[n.id]!);
+      if (members.length === 0) continue;
+      const x = Math.min(...members.map((p) => p.x));
+      const y = Math.min(...members.map((p) => p.y));
+      const width = wave.ids.length > 1 ? ` · ${Math.min(wave.ids.length, agents)} agents` : "";
+      result.push({
+        id: `wave-${wave.index}`,
+        type: "wave",
+        position: vertical ? { x: x - 8, y: y - 28 } : { x, y: y - 32 },
+        data: { text: `Wave ${wave.index + 1}${width}` },
+        selectable: false,
+        draggable: false,
+      });
     }
-    const critical = e.kind === "critical";
-    return {
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      animated: critical,
-      style: {
-        stroke: critical ? "var(--fire-amber)" : undefined,
-        strokeWidth: critical ? 2 : 1.25,
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: critical ? "var(--fire-amber)" : "#78716c",
-      },
-    };
-  });
+    if (model.merge && positions[MERGE_ID]) {
+      result.push({
+        id: MERGE_ID,
+        type: "merge",
+        position: positions[MERGE_ID],
+        data: { vertical },
+        selectable: false,
+        draggable: false,
+      });
+    }
+    return result;
+  }, [model, positions, lit, selected, vertical, agents]);
+
+  const edges: Edge[] = model.edges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    style: e.critical
+      ? { stroke: "var(--fire-orange)", strokeDasharray: "6 5", strokeWidth: 2 }
+      : { stroke: "#3a4560", strokeWidth: 1.5 },
+    animated: e.critical,
+  }));
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      onNodeClick={(_, node) => onSelect(node.id)}
+      onNodeClick={(_, node) => node.type === "task" && onSelect(node.id)}
       onPaneClick={() => onSelect(null)}
       nodesConnectable={false}
       minZoom={0.2}
@@ -121,23 +125,11 @@ function Flow({ model, lit, selected, onSelect }: Props) {
     >
       <Background
         variant={BackgroundVariant.Dots}
-        gap={24}
+        gap={28}
         size={1}
-        color="rgba(255,255,255,0.06)"
+        color="rgba(148,160,184,0.08)"
       />
       <Controls showInteractive={false} position="bottom-right" />
     </ReactFlow>
   );
-}
-
-function useNarrow(breakpoint = 640): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    const update = () => setNarrow(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, [breakpoint]);
-  return narrow;
 }
