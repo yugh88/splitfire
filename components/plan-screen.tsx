@@ -7,6 +7,8 @@ import { TaskGraph } from "@/components/graph/task-graph";
 import { HeatmapView } from "@/components/heatmap-view";
 import { Logo } from "@/components/logo";
 import { MetricCards } from "@/components/metric-cards";
+import { MissionControl } from "@/components/mission-control/mission-control";
+import { useTracks } from "@/components/mission-control/use-tracks";
 import { ProgressSteps } from "@/components/progress-steps";
 import { TaskCard } from "@/components/task-card";
 import { WaveList } from "@/components/wave-list";
@@ -14,6 +16,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { type GraphModel, graphModel, taskLabels } from "@/lib/client/graph-model";
 import type { PlanState } from "@/lib/client/plan-state";
 import { formatMinutes, plural } from "@/lib/format";
+import type { TaskStatus } from "@/lib/track/types";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,14 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
   const model = useMemo(() => graphModel(state), [state]);
   const tasks = state.partitioned?.tasks;
   const labels = useMemo(() => taskLabels(tasks ?? state.proposals), [tasks, state.proposals]);
+  const planId = state.report?.plan.id ?? null;
+  const { tracks, live, ready, toggle } = useTracks(planId);
+  const trackStatuses = useMemo(() => {
+    if (!live || !tracks) return undefined;
+    const statuses: Record<string, TaskStatus> = {};
+    for (const track of tracks) statuses[track.taskId] = track.status;
+    return statuses;
+  }, [live, tracks]);
 
   useEffect(() => {
     setLit(new Set());
@@ -106,6 +117,17 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
         </div>
       )}
 
+      {planId && (
+        <MissionControl
+          planId={planId}
+          tracks={tracks}
+          labels={labels}
+          live={live}
+          ready={ready}
+          onToggle={toggle}
+        />
+      )}
+
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
         <section className="border-border bg-card/60 min-w-0 rounded-xl border">
           <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2">
@@ -150,6 +172,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
                       lit={lit}
                       selected={selected}
                       onSelect={setSelected}
+                      tracks={trackStatuses}
                     />
                   ) : (
                     <Waiting />
