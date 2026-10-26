@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { allPrompts, splitfirePack, taskPrompt } from "@/lib/context/export";
+import { generateGatesWorkflow } from "@/lib/gates/workflow";
 import type { Plan, Task } from "@/lib/types";
 
 const task = (id: string, extra: Partial<Task> = {}): Task => ({
@@ -42,7 +43,7 @@ describe("taskPrompt", () => {
   it("is a self-contained brief with ownership, context, waits and checks", () => {
     const prompt = taskPrompt(plan.tasks[0]!, plan, { shareUrl: "https://x/p/abc" });
     expect(prompt).toContain("# T1 · Title ui");
-    expect(prompt).toContain("Branch: `splitfire/ui`");
+    expect(prompt).toContain("Branch: `splitfire/T1`");
     expect(prompt).toContain("## Files you own (edit only these)\n- `src/ui.ts`");
     expect(prompt).toContain("## Context pack (read-only, do not edit)\n- `src/types.ts`");
     expect(prompt).toContain(
@@ -66,18 +67,22 @@ describe("allPrompts / splitfirePack", () => {
     expect(text.split("\n---\n")).toHaveLength(2);
   });
 
-  it("writes README, plan.json and one file per task", () => {
+  it("writes README, plan.json, the gate workflow and one file per task", () => {
     const pack = splitfirePack(plan);
     expect(Object.keys(pack).sort()).toEqual([
+      ".github/workflows/splitfire-gates.yml",
       ".splitfire/README.md",
       ".splitfire/plan.json",
       ".splitfire/tasks/T0-contracts.md",
       ".splitfire/tasks/T1-ui.md",
     ]);
     expect(JSON.parse(pack[".splitfire/plan.json"]!)).toEqual(plan);
+    expect(pack[".github/workflows/splitfire-gates.yml"]).toEqual(generateGatesWorkflow(plan));
     expect(pack[".splitfire/README.md"]).toContain(
       "| T1 | 2 | feature | Title ui | 1 | T0 | fast | 20 min |",
     );
     expect(pack[".splitfire/README.md"]).toContain("Serial 40m → 40m with 1 agent (1×)");
+    expect(pack[".splitfire/README.md"]).toContain("## How done-checks work");
+    expect(pack[".splitfire/README.md"]).toContain("check run named `splitfire/Tn`");
   });
 });
