@@ -1,0 +1,156 @@
+{
+  "meta": {
+    "generatedAt": "2026-10-27",
+    "endpoint": "POST /api/plan",
+    "repo": "shadcn-ui/taxonomy",
+    "sha": "298a8857c7128a0d121e7f699dfd729f23b3966d",
+    "request": "Add OAuth login",
+    "agentsRequested": 4,
+    "planner": "llm",
+    "plannerModel": "gemma-4-26b-a4b-it",
+    "shareUrl": "https://splitfire-one.vercel.app/p/43e1f368e8a2c689"
+  },
+  "report": {
+    "plan": {
+      "id": "43e1f368e8a2c689",
+      "repo": "shadcn-ui/taxonomy",
+      "sha": "298a8857c7128a0d121e7f699dfd729f23b3966d",
+      "request": "Add OAuth login",
+      "tasks": [
+        {
+          "id": "auth-contract",
+          "title": "Define OAuth Auth Options",
+          "goal": "Update lib/auth.ts to include OAuth providers in NextAuth configuration.",
+          "kind": "contract",
+          "ownedFiles": ["lib/auth.ts"],
+          "readFiles": ["config/site.ts", "env.mjs", "lib/db.ts"],
+          "dependsOn": [],
+          "difficulty": 2,
+          "model": "gemma-4-26b-a4b-it",
+          "estTokens": 10913,
+          "estCostUsd": 0,
+          "estMinutes": 18,
+          "acceptance": ["npx tsc --noEmit", "git diff --name-only touches only owned files"]
+        },
+        {
+          "id": "oauth-ui-components",
+          "title": "Add OAuth Login Buttons",
+          "goal": "Create a new component for OAuth provider buttons (e.g., GitHub) and integrate it into the login page.",
+          "kind": "feature",
+          "ownedFiles": ["components/user-oauth-form.tsx", "app/(auth)/login/page.tsx"],
+          "readFiles": [
+            "components/icons.tsx",
+            "components/ui/button.tsx",
+            "components/user-auth-form.tsx",
+            "lib/utils.ts"
+          ],
+          "dependsOn": ["auth-contract"],
+          "difficulty": 2,
+          "model": "gemma-4-26b-a4b-it",
+          "estTokens": 17105,
+          "estCostUsd": 0,
+          "estMinutes": 21,
+          "acceptance": [
+            "npx tsc --noEmit",
+            "pnpm run build",
+            "test -f components/user-oauth-form.tsx",
+            "git diff --name-only touches only owned files"
+          ]
+        },
+        {
+          "id": "oauth-api-route",
+          "title": "Configure NextAuth API Route",
+          "goal": "Ensure the NextAuth API route is correctly handling OAuth callbacks.",
+          "kind": "feature",
+          "ownedFiles": ["app/api/auth/[...nextauth]/_route.ts"],
+          "readFiles": ["lib/auth.ts"],
+          "dependsOn": ["auth-contract"],
+          "difficulty": 2,
+          "model": "gemma-4-26b-a4b-it",
+          "estTokens": 7700,
+          "estCostUsd": 0,
+          "estMinutes": 18,
+          "acceptance": [
+            "npx tsc --noEmit",
+            "pnpm run build",
+            "git diff --name-only touches only owned files"
+          ]
+        },
+        {
+          "id": "oauth-env-setup",
+          "title": "Update Environment Variables",
+          "goal": "Add placeholder documentation/examples for OAuth client IDs and secrets in .env.example.",
+          "kind": "docs",
+          "ownedFiles": [".env.example"],
+          "readFiles": [],
+          "dependsOn": [],
+          "difficulty": 1,
+          "model": "gemma-4-26b-a4b-it",
+          "estTokens": 3538,
+          "estCostUsd": 0,
+          "estMinutes": 11,
+          "acceptance": ["git diff --name-only touches only owned files"]
+        },
+        {
+          "id": "oauth-integration-test",
+          "title": "Test OAuth Flow",
+          "goal": "Add unit tests for the auth configuration to ensure providers are correctly registered.",
+          "kind": "test",
+          "ownedFiles": ["lib/auth.test.ts"],
+          "readFiles": [],
+          "dependsOn": ["auth-contract"],
+          "difficulty": 3,
+          "model": "gemma-4-26b-a4b-it",
+          "estTokens": 7000,
+          "estCostUsd": 0,
+          "estMinutes": 28,
+          "acceptance": [
+            "test -f lib/auth.test.ts",
+            "git diff --name-only touches only owned files"
+          ]
+        }
+      ],
+      "collisionScore": 0,
+      "serialMinutes": 96,
+      "parallelMinutes": 46,
+      "speedup": 2.1,
+      "agents": 3,
+      "tokensFullRepo": 428775,
+      "tokensWithPacks": 8836,
+      "totalCostUsd": 0
+    },
+    "planner": "llm",
+    "notice": null,
+    "draft": [
+      {
+        "id": "auth-contract",
+        "title": "Define OAuth Auth Options",
+        "ownedFiles": ["lib/auth.ts"]
+      },
+      {
+        "id": "oauth-ui-components",
+        "title": "Add OAuth Login Buttons",
+        "ownedFiles": ["components/user-oauth-form.tsx", "app/(auth)/login/page.tsx"]
+      },
+      {
+        "id": "oauth-api-route",
+        "title": "Configure NextAuth API Route",
+        "ownedFiles": ["app/api/auth/[...nextauth]/_route.ts"]
+      },
+      {
+        "id": "oauth-env-setup",
+        "title": "Update Environment Variables",
+        "ownedFiles": [".env.example"]
+      },
+      {
+        "id": "oauth-integration-test",
+        "title": "Test OAuth Flow",
+        "ownedFiles": ["lib/auth.test.ts"]
+      }
+    ],
+    "collisions": [],
+    "collisionScoreBefore": 0,
+    "repairs": [],
+    "criticalPath": ["auth-contract", "oauth-integration-test"]
+  }
+}
