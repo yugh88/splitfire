@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { Annotation } from "@/components/annotation";
+import { dropProps, useResplit } from "@/components/resplit/resplit-context";
 import type { Wave } from "@/lib/client/graph-model";
 import type { PlanEventData } from "@/lib/plan/events";
 import type { Metrics } from "@/lib/plan/events";
@@ -22,19 +23,28 @@ type Props = {
 /** The demo moment: the model's overlapping draft vs. the repaired, one-owner-per-file plan. */
 export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
   const { draft, tasks, collisions } = partitioned;
+  const resplit = useResplit();
+  const live = resplit?.canEdit ? resplit : null;
+  const liveTasks = live?.tasks ?? tasks;
+  const liveClaims = live?.claims ?? [];
+  const liveScore = live ? live.claimScore : partitioned.collisionScore;
+  const previewing = Boolean(live?.preview);
   const letters = new Map(draft.map((d, i) => [d.id, String.fromCharCode(65 + (i % 26))]));
   const claimants = new Map(collisions.map((c) => [c.file, c.tasks.length]));
-  const owner = new Map(tasks.flatMap((t) => t.ownedFiles.map((f) => [f, t] as const)));
+  const owner = new Map(liveTasks.flatMap((t) => t.ownedFiles.map((f) => [f, t] as const)));
+  const liveClaimants = new Map(liveClaims.map((c) => [c.file, c.tasks]));
 
   const contested = collisions.map((c) => c.file);
   const others = [...new Set(draft.flatMap((d) => d.ownedFiles))]
     .filter((f) => !claimants.has(f))
     .sort();
-  const files = [...contested, ...others];
+  // Keep the file in flight (or just moved) at the top, so its overlap is always on screen.
+  const focus = live?.focusFile ?? null;
+  const files = [...new Set([...(focus ? [focus] : []), ...contested, ...others])];
   const rows = files.slice(0, MAX_ROWS);
   const ordered = waves
     .flatMap((w) => w.ids)
-    .map((id) => tasks.find((t) => t.id === id))
+    .map((id) => liveTasks.find((t) => t.id === id))
     .filter((t): t is Task => Boolean(t));
   const label = (id: string) => labels.get(id) ?? letters.get(id) ?? id;
 
@@ -57,14 +67,24 @@ export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
           <div className="flex items-center gap-4">
             <Score label="Draft" value={partitioned.collisionScoreBefore} tone="text-fire-red" />
             <ArrowRight className="text-muted-foreground size-4" />
-            <Score label="Repaired" value={partitioned.collisionScore} tone="text-ok-green" />
+            <Score
+              label={previewing ? "Preview" : "Repaired"}
+              value={liveScore}
+              tone={liveScore > 0 ? "text-fire-red animate-pulse" : "text-ok-green"}
+            />
             <span className="text-muted-foreground max-w-28 text-[11px]">
               collision score · files with 2+ owners
             </span>
           </div>
-          <Annotation arrow="left" className="mt-1 hidden md:inline-flex">
-            draft → repaired
-          </Annotation>
+          {previewing ? (
+            <p className="text-fire-red mt-1 animate-pulse text-[11px]">
+              Overlap in flight — drop to resolve it.
+            </p>
+          ) : (
+            <Annotation arrow="left" className="mt-1 hidden md:inline-flex">
+              draft → repaired
+            </Annotation>
+          )}
         </div>
       </div>
 
@@ -95,13 +115,27 @@ export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
           columns={ordered.map((t) => ({ id: t.id, label: labels.get(t.id) ?? "?" }))}
           rows={rows}
           cell={(file, id) => {
+            const claiming = liveClaimants.get(file);
+            if (claiming && claiming.length > 1) {
+              return claiming.includes(id)
+                ? {
+                    text: `×${claiming.length}`,
+                    className: "border-fire-red/70 bg-fire-red/15 text-fire-red animate-pulse",
+                  }
+                : null;
+            }
             const t = owner.get(file);
             if (t?.id !== id) return null;
             return t.kind === "contract"
               ? { dot: "bg-contract-blue", className: "border-contract-blue/70" }
               : { dot: "bg-ok-green", className: "border-ok-green/70" };
           }}
-          footer={`Every file has exactly one owner.${tasks.some((t) => t.kind === "contract") ? " Contract tasks hold the shared types." : ""}`}
+          hot={(file) => (liveClaimants.get(file)?.length ?? 0) > 1}
+          footer={
+            liveClaimants.size > 0
+              ? `${plural(liveClaimants.size, "file")} overlapping right now — drop or undo to resolve.`
+              : `Every file has exactly one owner.${liveTasks.some((t) => t.kind === "contract") ? " Contract tasks hold the shared types." : ""}`
+          }
           more={files.length - rows.length}
         />
       </div>
@@ -154,6 +188,8 @@ function Matrix(props: {
   footer: string;
   more: number;
 }) {
+  const resplit = useResplit();
+  const canDrop = props.tone === "green" && Boolean(resplit?.canEdit);
   const accent = props.tone === "red" ? "border-fire-red/30" : "border-ok-green/30";
   return (
     <section
@@ -177,7 +213,15 @@ function Matrix(props: {
             <tr>
               <th className="text-muted-foreground text-left font-normal">File</th>
               {props.columns.map((c) => (
-                <th key={c.id} className="text-muted-foreground w-9 text-[10px] font-medium">
+                <th
+                  key={c.id}
+                  {...(canDrop && resplit ? dropProps(resplit, c.id) : {})}
+                  data-task-id={canDrop ? c.id : undefined}
+                  className={cn(
+                    "text-muted-foreground w-9 rounded-md text-[10px] font-medium",
+                    resplit?.hoveredTask === c.id && "text-fire-red bg-fire-red/10 animate-pulse",
+                  )}
+                >
                   {c.label}
                 </th>
               ))}
@@ -198,7 +242,11 @@ function Matrix(props: {
                 {props.columns.map((c) => {
                   const cell = props.cell(file, c.id);
                   return (
-                    <td key={c.id} className="p-0">
+                    <td
+                      key={c.id}
+                      className="p-0"
+                      {...(canDrop && resplit ? dropProps(resplit, c.id) : {})}
+                    >
                       <div
                         className={cn(
                           "border-border/60 bg-card flex h-7 w-9 items-center justify-center rounded-md border font-mono text-[10px]",
