@@ -6,9 +6,11 @@ Paste a GitHub repo and a feature request. Splitfire turns it into a collision-p
 that coding agents can run at the same time — each with its own contract, context pack, model, cost
 estimate and acceptance checks.
 
-[Live demo](https://splitfire-one.vercel.app) · [Example plan](https://splitfire-one.vercel.app/p/43e1f368e8a2c689)
+**▶ [Watch the demo video](https://x.com/JunejaYugh32619/status/2115095141333827710)** ·
+[Live app](https://splitfire-one.vercel.app) ·
+[Example plan](https://splitfire-one.vercel.app/p/43e1f368e8a2c689)
 
-![Splitfire landing page](docs/landing.png)
+[![Splitfire landing page — click to watch the demo video](docs/landing.png)](https://x.com/JunejaYugh32619/status/2115095141333827710)
 
 ## The problem
 
