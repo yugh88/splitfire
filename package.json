@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "splitfire": "./bin/splitfire.ts"
+    "splitfire": "./bin/splitfire.mjs"
   },
   "scripts": {
     "dev": "next dev",
@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "splitfire": "npx --yes tsx bin/splitfire.ts"
+    "splitfire": "node bin/splitfire.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.87",
