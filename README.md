@@ -94,14 +94,18 @@ so repeating a request replays the stored plan for free. No source code is store
   per-task and total estimates.
 - **Acceptance gates** — checks generated from the repo's real tooling (vitest/jest/pytest,
   typecheck, build, required files, and "the diff touches only owned files").
+- **Launch in Alan** — one panel with a ready-to-paste prompt per task, grouped by wave, so each
+  Alan session starts with its branch, owned files and checks.
 - **Mission control** — optionally watch `splitfire/<task>` branches and light up each task as it
-  moves through working, checking, passed, failed and merged.
+  moves through working, checking, passed, failed and merged, with a live cost meter.
+- **Gate checks in CI** — a generated GitHub Actions workflow runs each task's acceptance checks when
+  its `splitfire/<task>` branch is pushed and reports a `splitfire/<task>` check run.
 - **Export and share** — copy Alan-ready prompts per task or all at once, download the `.splitfire/`
   pack or plan JSON, and share read-only plans at `/p/<planId>`.
-- **CLI** — `npx splitfire plan "<request>"` plans the repository you are in and writes the same
+- **CLI** — `splitfire plan "<request>"` plans the repository you are in and writes the same
   `.splitfire/` pack, without uploading file contents.
 - **Interactive re-split** — drag a file to another task and the collision score, critical path and
-  schedule recompute live.
+  schedule recompute live; save the edited plan as a new share link.
 
 ## Built with Alan and open models
 
@@ -125,9 +129,9 @@ npm run dev
 ```
 
 Open <http://localhost:3000>. `.env.example` ships with `MOCK_LLM=1`, so the UI works with fixture
-plans and no keys. For real plans, set `MOCK_LLM=0` and fill in `OPENMODEL_BASE_URL`,
-`OPENMODEL_API_KEY`, `PLANNER_MODEL` and `MODEL_PRICES_JSON`. With no model configured, Splitfire
-plans deterministically and labels the plan as such.
+plans and no keys. For real plans, set `MOCK_LLM=0` and point it at any OpenAI-compatible open-model
+endpoint (see [Configuration](#configuration)). With no model configured, Splitfire plans
+deterministically and labels the plan as such.
 
 A `GITHUB_TOKEN` is optional; it raises GitHub's 60-requests-per-hour anonymous limit. Upstash Redis
 is optional too — without it, plans, rate limits and spend live in memory.
@@ -135,17 +139,24 @@ is optional too — without it, plans, rate limits and spend live in memory.
 ## CLI
 
 Plan a repo from a terminal. The CLI runs the same ingest, planner, partitioning and gates as the
-web app, then writes the pack:
+web app, then writes the pack. It is not published to npm yet, so run it from a clone:
 
 ```sh
+# inside the splitfire clone: plan this repo, or any GitHub repo with --repo
 npx splitfire plan "Add task due dates and email reminders" --agents 4
+npx splitfire plan "Add OAuth login" --repo shadcn-ui/taxonomy
+
+# from any other repository on your machine
+node /path/to/splitfire/bin/splitfire.mjs plan "Add task due dates and email reminders"
 ```
 
+Run `npm link` once in the clone to get a global `splitfire` command instead. The CLI writes:
+
 ```
-.splitfire/README.md      plan overview
-.splitfire/plan.json      manifest: tasks, owners, dependencies, schedule, costs
-.splitfire/tasks/*.md     one contract per task, with its acceptance checks
-.github/workflows/splitfire-gates.yml
+.splitfire/README.md                    plan overview
+.splitfire/plan.json                    manifest: tasks, owners, dependencies, schedule, costs
+.splitfire/tasks/*.md                   one prompt per task, with its acceptance checks
+.github/workflows/splitfire-gates.yml   runs each task's checks on its splitfire/<task> branch
 ```
 
 | Option      | Default      | Purpose                                             |
@@ -158,7 +169,7 @@ npx splitfire plan "Add task due dates and email reminders" --agents 4
 
 Local mode is the default and reads files from disk, honouring `.gitignore` and the same skip rules
 as ingest. File contents never leave the machine: only paths, the import graph and the request can
-reach the model, and `--offline` sends nothing at all. `npx splitfire --help` prints the full usage.
+reach the model, and `--offline` sends nothing at all. `splitfire --help` prints the full usage.
 
 ## Configuration
 
@@ -171,7 +182,26 @@ reach the model, and `--offline` sends nothing at all. `npx splitfire --help` pr
 | `CREDIT_BUDGET_USD`, `PLAN_MAX_COST_USD`                  | Total and per-plan spend caps (defaults `5` and `0.05`)              |
 | `MOCK_LLM`                                                | `1` = fixture plans, no model calls                                  |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`      | Plan store, cache, spend and rate limits (in-memory if unset)        |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN`                    | Same, under the names the Vercel Upstash integration sets            |
 | `GITHUB_TOKEN`                                            | Optional; raises the GitHub rate limit                               |
+
+The live demo runs on **Gemma 4** (open weights) through the Gemini API's OpenAI-compatible
+endpoint, free tier:
+
+```sh
+OPENMODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+OPENMODEL_API_KEY=<your Gemini API key>
+PLANNER_MODEL=gemma-4-26b-a4b-it
+FAST_MODEL=gemma-4-26b-a4b-it
+FALLBACK_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+FALLBACK_API_KEY=<your Gemini API key>
+FALLBACK_MODEL=gemma-4-31b-it
+MODEL_PRICES_JSON={"gemma-4-26b-a4b-it":{"input":0,"output":0},"gemma-4-31b-it":{"input":0,"output":0}}
+```
+
+Gemma streams its reasoning as ordinary text, so `lib/plan/llm.ts` filters it out of the stream
+before the JSON is parsed, and turns off JSON mode for Gemma (the prompt still fixes the shape and
+Zod still validates it). Any other OpenAI-compatible provider needs no special handling.
 
 **Credit guards.** Before every model call the worst-case cost is checked against both caps using
 `MODEL_PRICES_JSON`; a call that could exceed them is not made, and unpriced models are never
@@ -185,6 +215,7 @@ IP per hour. `GET /api/health` reports spend and the current mode (numbers only,
   `ingested`, `graph`, `task`, `partitioned`, `metrics`, `done`, `error`.
 - `GET /api/health` returns spend, budget and the planning mode.
 - `GET /api/track/<planId>` returns live `splitfire/*` branch status for a stored plan.
+- `POST /api/share` stores an edited (re-split) plan and returns its share id.
 - `/p/<planId>` is the read-only share page.
 
 ## Development
@@ -193,20 +224,24 @@ IP per hour. `GET /api/health` reports spend and the current mode (numbers only,
 npm run lint          # ESLint
 npm run typecheck     # tsc --noEmit
 npm test              # Vitest unit tests
-npm run test:e2e      # Playwright smoke test (mock dev server, or set E2E_BASE_URL)
+npm run test:e2e      # Playwright: main flow + re-split (mock dev server, or set E2E_BASE_URL)
 npm run format:check  # Prettier
 ```
 
-CI runs lint, format check, typecheck and unit tests on every push.
+CI runs lint, format check, typecheck and unit tests on every push to `main`; the **Splitfire
+gates** workflow runs task checks on `splitfire/**` branches. Pushes to `main` deploy to Vercel.
 
 ```
-app/          routes: /, /p/[id], /api/plan, /api/health, /api/track/[id]
-components/   landing, planner, graph, task cards, heatmap, mission control, export
-lib/          ingest/ analyze/ plan/ partition/ context/ cost/ gates/ store/ track/ · types.ts
-tests/        Vitest unit tests and a fixture repo
-e2e/          Playwright smoke test
-data/         featured-plan.json — the real plan behind the landing stats
-docs/         screenshots used in this README
+app/              routes: /, /p/[id], /api/plan, /api/health, /api/share, /api/track/[id]
+components/       landing, plan screen, graph, task cards, heatmap, re-split, mission control, launch
+hooks/            plan stream and media-query hooks
+lib/              ingest/ analyze/ plan/ partition/ context/ cost/ gates/ track/ store/ client/
+lib/types.ts      core types shared by every module
+cli/, bin/        the splitfire CLI and its launcher
+tests/, e2e/      Vitest unit tests with a fixture repo; Playwright end-to-end tests
+data/             featured-plan.json — the real plan behind the landing stats
+docs/             screenshots used in this README
+.splitfire/       Splitfire's own plan for its CLI and re-split features
 ```
 
 ## Known limits
@@ -214,7 +249,8 @@ docs/         screenshots used in this README
 v1 guarantees no _file_ overlap between tasks. Semantic conflicts — two tasks changing behaviour the
 other relies on — are caught by the acceptance gates, not prevented. Repos larger than ~500 source
 files or 2 MB are planned from a deterministic subset (core source first). Free-tier open-model
-endpoints rate-limit; Splitfire retries once, falls back, then uses the deterministic planner.
+endpoints rate-limit; Splitfire retries transient errors, tries the fallback model, then uses the
+deterministic planner, all within a fixed planning deadline. The CLI is not on npm yet.
 
 ## License
 
