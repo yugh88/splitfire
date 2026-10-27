@@ -8,7 +8,7 @@ const PLAN_ID = "fedcba9876543210";
 const TOKEN = "secret-token-value";
 
 const task: Task = {
-  id: "a",
+  id: "auth-contract",
   title: "A",
   goal: "g",
   kind: "feature",
@@ -94,9 +94,9 @@ describe("GET /api/track/[id]", () => {
     expect(text).not.toContain(TOKEN);
     expect(JSON.parse(text)).toEqual([
       {
-        taskId: "a",
+        taskId: "auth-contract",
         status: "waiting",
-        branch: "splitfire/T0",
+        branch: "splitfire/auth-contract",
         updatedAt: expect.any(String),
       },
     ]);

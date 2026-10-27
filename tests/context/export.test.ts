@@ -126,6 +126,6 @@ describe("allPrompts / splitfirePack", () => {
     );
     expect(pack[".splitfire/README.md"]).toContain("Serial 40m → 40m with 1 agent (1×)");
     expect(pack[".splitfire/README.md"]).toContain("## How done-checks work");
-    expect(pack[".splitfire/README.md"]).toContain("check run named `splitfire/Tn`");
+    expect(pack[".splitfire/README.md"]).toContain("check run named after the branch");
   });
 });

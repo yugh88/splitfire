@@ -7,11 +7,11 @@ export type CheckRunState = {
 };
 
 export type StatusInput = {
-  /** Does `splitfire/Tn` exist? */
+  /** Does the task branch exist? */
   branchExists: boolean;
   /** Is the branch head ahead of the plan's base sha? */
   aheadOfBase: boolean;
-  /** Latest check run named `splitfire/Tn` on the branch head. */
+  /** Latest check run named after the task branch on the branch head. */
   checkRun?: CheckRunState | null;
   /** Is the head commit reachable from the default branch? */
   merged: boolean;

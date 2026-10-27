@@ -1,6 +1,7 @@
 import { config } from "@/lib/env";
 import { taskLabels } from "@/lib/partition/waves";
 import { kv, type KV } from "@/lib/store/kv";
+import { isSafeTaskId } from "@/lib/task-id";
 import type { Task } from "@/lib/types";
 import { deriveTaskStatus, type CheckRunState } from "./status";
 import type { TaskTrack } from "./types";
@@ -75,9 +76,10 @@ export async function getTracks(plan: TrackPlan, deps: TrackDeps = {}): Promise<
 
   const tracks = await Promise.all(
     plan.tasks.map(async (task): Promise<TaskTrack> => {
-      const label = labels.get(task.id) ?? task.id;
-      const branch = `splitfire/${label}`;
-      const headSha = heads.get(branch);
+      // Launch in Alan pushes `splitfire/<task id>`; older agent runs used the wave label `Tn`.
+      const names = branchNames(task.id, labels.get(task.id));
+      const branch = names.find((name) => heads.has(name)) ?? names[0] ?? "";
+      const headSha = branch ? heads.get(branch) : undefined;
       if (!headSha) {
         return { taskId: task.id, status: "waiting", branch, updatedAt };
       }
@@ -119,6 +121,21 @@ export async function getTracks(plan: TrackPlan, deps: TrackDeps = {}): Promise<
 
   await store.set(cacheKey, tracks, TRACK_CACHE_SECONDS);
   return tracks;
+}
+
+/**
+ * Branch names to look for, in order: the task id branch the current prompts push, then the wave
+ * label branch older runs used. Only safe ids become branch names, and labels are generated locally,
+ * so a well-formed plan always yields at least one name.
+ */
+function branchNames(taskId: string, label: string | undefined): string[] {
+  const names: string[] = [];
+  if (isSafeTaskId(taskId)) names.push(`splitfire/${taskId}`);
+  if (label && isSafeTaskId(label)) {
+    const legacy = `splitfire/${label}`;
+    if (!names.includes(legacy)) names.push(legacy);
+  }
+  return names;
 }
 
 async function compare(

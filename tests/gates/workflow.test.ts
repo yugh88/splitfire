@@ -113,9 +113,9 @@ describe("generateGatesWorkflow", () => {
     expect(envStep?.env?.GITHUB_TOKEN).toContain("secrets.GITHUB_TOKEN");
   });
 
-  it("only trusts the branch name for a Tn label and never reads commit messages", () => {
-    expect(yaml).toContain("^splitfire\\/(T[0-9]+)$");
-    expect(yaml).toContain('"splitfire/" + label');
+  it("only trusts a safe task id in the branch name and never reads commit messages", () => {
+    expect(yaml).toContain("^splitfire\\/([A-Za-z0-9][A-Za-z0-9._-]{0,63})$");
+    expect(yaml).toContain('"splitfire/" + taskRef');
     expect(yaml).not.toContain("head_commit");
     expect(yaml).not.toContain("commit.message");
   });
@@ -188,19 +188,48 @@ describe("the embedded gate runner", () => {
     expect(result?.summary).toContain("No runnable acceptance checks");
   });
 
-  it("skips branches that are not splitfire/Tn", () => {
-    for (const branch of ["splitfire/done-checks", "splitfire/T", "splitfire/T0-extra", "main"]) {
+  it("skips branches whose task id is missing or unsafe", () => {
+    const branches = [
+      "main",
+      "splitfire/",
+      "splitfire/../x",
+      "splitfire/a;rm",
+      "splitfire/$(x)",
+      `splitfire/${"a".repeat(65)}`,
+    ];
+    for (const branch of branches) {
       const { run, result } = runGate([task("a", ["npm test"])], branch);
-      expect(run.status).toBe(0);
-      expect(result?.skip).toBe(true);
+      expect(run.status, branch).toBe(0);
+      expect(result?.skip, branch).toBe(true);
     }
   });
 
-  it("fails when the label does not name a task in the plan", () => {
-    const { run, result } = runGate([task("a", ["npm test"])], "splitfire/T9");
-    expect(run.status).toBe(1);
-    expect(result?.conclusion).toBe("failure");
-    expect(result?.summary).toContain("No task T9");
+  it("fails when a safe task id does not name a task in the plan", () => {
+    for (const branch of ["splitfire/T9", "splitfire/missing-task"]) {
+      const { run, result } = runGate([task("a", ["npm test"])], branch);
+      expect(run.status, branch).toBe(1);
+      expect(result?.conclusion).toBe("failure");
+      expect(result?.summary).toContain("No task " + branch.slice("splitfire/".length));
+    }
+  });
+
+  it("runs a slug task id branch and names the gate after that id", () => {
+    const { run, result } = runGate(
+      [task("auth-contract", ["test -f marker.txt"])],
+      "splitfire/auth-contract",
+      { "marker.txt": "ok" },
+    );
+    expect(run.status).toBe(0);
+    expect(result).toMatchObject({ label: "auth-contract", conclusion: "success" });
+    expect(result?.summary).toContain("**auth-contract - Title auth-contract**");
+  });
+
+  it("still runs a legacy splitfire/Tn label branch", () => {
+    const { run, result } = runGate([task("a", ["test -f marker.txt"])], "splitfire/T0", {
+      "marker.txt": "ok",
+    });
+    expect(run.status).toBe(0);
+    expect(result).toMatchObject({ label: "T0", conclusion: "success" });
   });
 
   it("maps labels by wave order, not array order", () => {
@@ -318,11 +347,11 @@ describe("the embedded reporter", () => {
     return { status, stdout, stderr };
   }
 
-  it("creates a check run named splitfire/Tn on the head commit", async () => {
+  it("creates a check run named splitfire/<task-id> on the head commit", async () => {
     const { received, api } = await listen();
-    const run = await runReport(api, "splitfire/T2", {
+    const run = await runReport(api, "splitfire/re-split-logic", {
       conclusion: "success",
-      title: "Title a",
+      title: "Title auth-contract",
       summary: "1 passed, 0 failed, 0 manual.",
     });
     expect(run.status, run.stderr).toBe(0);
@@ -330,12 +359,22 @@ describe("the embedded reporter", () => {
     expect(received[0]?.url).toBe("/repos/acme/app/check-runs");
     expect(received[0]?.auth).toBe("Bearer test-token");
     expect(received[0]?.body).toMatchObject({
-      name: "splitfire/T2",
+      name: "splitfire/re-split-logic",
       head_sha: "deadbeef",
       status: "completed",
       conclusion: "success",
-      output: { title: "splitfire/T2: Title a", summary: "1 passed, 0 failed, 0 manual." },
+      output: {
+        title: "splitfire/re-split-logic: Title auth-contract",
+        summary: "1 passed, 0 failed, 0 manual.",
+      },
     });
+  });
+
+  it("still names a legacy splitfire/Tn check run after the label", async () => {
+    const { received, api } = await listen();
+    const run = await runReport(api, "splitfire/T2", { conclusion: "success", title: "Title a" });
+    expect(run.status, run.stderr).toBe(0);
+    expect(received[0]?.body).toMatchObject({ name: "splitfire/T2" });
   });
 
   it("reports failure when the gate produced no result", async () => {
@@ -351,10 +390,12 @@ describe("the embedded reporter", () => {
     );
   });
 
-  it("creates no check run for a branch whose label is invalid", async () => {
-    const { received, api } = await listen();
-    const run = await runReport(api, "splitfire/done-checks", { conclusion: "success" });
-    expect(run.status, run.stderr).toBe(0);
-    expect(received).toEqual([]);
+  it("creates no check run for a branch whose task id is unsafe", async () => {
+    for (const branch of ["main", "splitfire/../x", "splitfire/a;rm", "splitfire/$(x)"]) {
+      const { received, api } = await listen();
+      const run = await runReport(api, branch, { conclusion: "success" });
+      expect(run.status, run.stderr).toBe(0);
+      expect(received, branch).toEqual([]);
+    }
   });
 });
