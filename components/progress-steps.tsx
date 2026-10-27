@@ -30,11 +30,11 @@ export function ProgressSteps({ state }: { state: PlanState }) {
             className={cn("flex items-center gap-1.5", !done && !active && "opacity-40")}
           >
             {done ? (
-              <Check className="size-3.5 text-emerald-400" />
+              <Check className="text-ok-green size-3.5" />
             ) : active ? (
-              <Loader2 className="text-primary size-3.5 animate-spin" />
+              <Loader2 className="text-primary size-3.5 animate-spin motion-reduce:animate-none" />
             ) : (
-              <span className="border-muted-foreground size-3.5 rounded-full border" />
+              <span className="border-muted-foreground/60 size-3.5 rounded-full border" />
             )}
             <span className="font-medium">{step.label}</span>
             {detail[step.stage] && (

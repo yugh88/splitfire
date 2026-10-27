@@ -80,7 +80,10 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
             {state.ingested?.repo ?? repo}
             {sha ? ` @ ${sha.slice(0, 7)}` : ""}
           </div>
-          <div className="text-sm font-semibold sm:truncate sm:text-base" title={request}>
+          <div
+            className="font-display text-sm font-semibold tracking-[-0.01em] sm:truncate sm:text-base"
+            title={request}
+          >
             {request}
           </div>
         </div>
@@ -96,7 +99,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
       {state.report?.notice && (
         <div
           role="status"
-          className="border-fire-amber/40 bg-fire-amber/10 mt-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+          className="border-fire-amber/25 bg-fire-amber/[0.07] mt-4 flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
         >
           <AlertTriangle className="text-fire-amber size-4 shrink-0" />
           {state.report.notice === "demo budget reached"
@@ -106,7 +109,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
       )}
 
       {done && (
-        <div className="mt-4">
+        <div className="mt-7">
           <MetricCards
             compact={!wide}
             metrics={done.metrics}
@@ -129,11 +132,11 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
       )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <section className="border-border bg-card/60 min-w-0 rounded-xl border">
+        <section className="border-border bg-card/60 min-w-0 rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2">
             <div
               role="tablist"
-              className="border-border bg-background/50 flex rounded-lg border p-1"
+              className="border-border flex rounded-xl border bg-white/[0.02] p-1"
             >
               {(["graph", "heatmap"] as const).map((t) => (
                 <button
@@ -143,8 +146,10 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
                   disabled={t === "heatmap" && !done}
                   onClick={() => setTab(t)}
                   className={cn(
-                    "font-heading rounded-md px-4 py-1.5 text-xs tracking-widest uppercase disabled:opacity-40",
-                    tab === t ? "bg-accent text-foreground" : "text-muted-foreground",
+                    "rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition-colors disabled:opacity-40",
+                    tab === t
+                      ? "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {t}
@@ -222,7 +227,7 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
                 onClose={() => setSelected(null)}
               />
             ) : (
-              <div className="border-border text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
+              <div className="border-border text-muted-foreground rounded-2xl border border-dashed bg-white/[0.015] p-4 text-sm">
                 {done
                   ? "Select a task to see its files, model, cost and checks."
                   : "Tasks appear in the graph as the planner streams them."}
@@ -246,7 +251,7 @@ function Legend() {
     <div className="text-muted-foreground hidden items-center gap-4 text-xs md:flex">
       {items.map((i) => (
         <span key={i.label} className="flex items-center gap-1.5">
-          <span className={cn("size-2.5 rounded-sm", i.className)} />
+          <span className={cn("size-2 rounded-full", i.className)} />
           {i.label}
         </span>
       ))}
@@ -281,7 +286,7 @@ function ContractsCallout(props: {
       ? `Contracts-first: ${contracts.map((t) => props.labels.get(t.id)).join(", ")} lands shared types in ${formatMinutes(Math.max(...contracts.map((t) => t.estMinutes)))}, so ${plural(Math.min(second.ids.length, props.agents), "agent")} start wave 2 together instead of waiting in a chain.`
       : `${plural(props.model.waves.length, "wave")} · up to ${plural(props.agents, "agent")} at a time, each on files no one else touches.`;
   return (
-    <p className="border-border bg-background/50 m-3 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm">
+    <p className="border-border m-3 flex items-start gap-2 rounded-xl border bg-white/[0.02] px-3 py-2.5 text-sm">
       <Zap className="text-contract-blue mt-0.5 size-4 shrink-0" />
       {text}
     </p>

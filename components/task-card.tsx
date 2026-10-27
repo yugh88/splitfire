@@ -15,7 +15,7 @@ export function TaskCard({ task, labels, plan, onClose }: Props) {
   const kind = KIND[task.kind];
   return (
     <article
-      className="border-border bg-card rounded-xl border p-4"
+      className="border-border bg-card rounded-2xl border p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
       aria-label={`Task ${task.title}`}
     >
       <header className="mb-2 flex items-start justify-between gap-3">
@@ -35,7 +35,7 @@ export function TaskCard({ task, labels, plan, onClose }: Props) {
           </Button>
         )}
       </header>
-      <h3 className="text-xl font-semibold">{task.title}</h3>
+      <h3 className="font-display text-xl font-semibold tracking-[-0.02em]">{task.title}</h3>
       <p className="text-muted-foreground mt-1 mb-4 text-sm">{task.goal}</p>
 
       <dl className="mb-4 grid grid-cols-3 gap-2 text-sm">
@@ -92,8 +92,13 @@ export function TaskCard({ task, labels, plan, onClose }: Props) {
 
 function Fact({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
-    <div className="border-border bg-background/40 rounded-lg border px-3 py-2" title={title}>
-      <dt className="text-muted-foreground text-[10px] tracking-wider uppercase">{label}</dt>
+    <div
+      className="border-border rounded-xl border bg-white/[0.02] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
+      title={title}
+    >
+      <dt className="text-muted-foreground text-[10px] font-medium tracking-[0.14em] uppercase">
+        {label}
+      </dt>
       <dd className="truncate font-semibold">{value}</dd>
     </div>
   );
@@ -102,7 +107,7 @@ function Fact({ label, value, title }: { label: string; value: string; title?: s
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-4">
-      <h4 className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wider uppercase">
+      <h4 className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-[0.14em] uppercase">
         {title}
       </h4>
       <div className="max-h-48 space-y-1.5 overflow-auto">{children}</div>
@@ -114,10 +119,10 @@ function FileRow({ file, icon, owned }: { file: string; icon: React.ReactNode; o
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-md border px-2.5 py-1.5 font-mono text-xs",
+        "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 font-mono text-xs",
         owned
-          ? "border-fire-amber/30 bg-fire-amber/5 text-fire-amber"
-          : "border-border bg-background/40 text-foreground",
+          ? "border-fire-amber/25 bg-fire-amber/[0.06] text-fire-amber"
+          : "border-border text-foreground bg-white/[0.02]",
       )}
       title={file}
     >

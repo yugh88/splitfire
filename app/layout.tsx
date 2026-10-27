@@ -1,10 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Silkscreen } from "next/font/google";
+import { Caveat, Instrument_Serif, Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { AmbientBackground } from "@/components/ambient-background";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-const pixel = Silkscreen({ variable: "--font-pixel", weight: ["400", "700"], subsets: ["latin"] });
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
+  subsets: ["latin"],
+  display: "swap",
+});
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
+  style: ["italic"],
+  subsets: ["latin"],
+  display: "swap",
+});
+const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"], display: "swap" });
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Splitfire",
@@ -19,9 +41,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${pixel.variable}`}
+      className={`dark ${inter.variable} ${interTight.variable} ${instrumentSerif.variable} ${caveat.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="bg-grid min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <AmbientBackground />
+        <div className="relative z-10">{children}</div>
+      </body>
     </html>
   );
 }
