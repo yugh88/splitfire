@@ -98,6 +98,10 @@ so repeating a request replays the stored plan for free. No source code is store
   moves through working, checking, passed, failed and merged.
 - **Export and share** — copy Alan-ready prompts per task or all at once, download the `.splitfire/`
   pack or plan JSON, and share read-only plans at `/p/<planId>`.
+- **CLI** — `npx splitfire plan "<request>"` plans the repository you are in and writes the same
+  `.splitfire/` pack, without uploading file contents.
+- **Interactive re-split** — drag a file to another task and the collision score, critical path and
+  schedule recompute live.
 
 ## Built with Alan and open models
 
@@ -127,6 +131,34 @@ plans deterministically and labels the plan as such.
 
 A `GITHUB_TOKEN` is optional; it raises GitHub's 60-requests-per-hour anonymous limit. Upstash Redis
 is optional too — without it, plans, rate limits and spend live in memory.
+
+## CLI
+
+Plan a repo from a terminal. The CLI runs the same ingest, planner, partitioning and gates as the
+web app, then writes the pack:
+
+```sh
+npx splitfire plan "Add task due dates and email reminders" --agents 4
+```
+
+```
+.splitfire/README.md      plan overview
+.splitfire/plan.json      manifest: tasks, owners, dependencies, schedule, costs
+.splitfire/tasks/*.md     one contract per task, with its acceptance checks
+.github/workflows/splitfire-gates.yml
+```
+
+| Option      | Default      | Purpose                                             |
+| ----------- | ------------ | --------------------------------------------------- |
+| `--repo`    | current dir  | Plan a GitHub repo instead (`owner/name` or a URL)  |
+| `--agents`  | `2`          | Number of parallel agents to schedule for           |
+| `--out`     | `.splitfire` | Pack directory                                      |
+| `--mock`    | off          | Skip model calls; use the deterministic planner     |
+| `--offline` | off          | Never touch the network; deterministic planner only |
+
+Local mode is the default and reads files from disk, honouring `.gitignore` and the same skip rules
+as ingest. File contents never leave the machine: only paths, the import graph and the request can
+reach the model, and `--offline` sends nothing at all. `npx splitfire --help` prints the full usage.
 
 ## Configuration
 
@@ -183,10 +215,6 @@ v1 guarantees no _file_ overlap between tasks. Semantic conflicts — two tasks 
 other relies on — are caught by the acceptance gates, not prevented. Repos larger than ~500 source
 files or 2 MB are planned from a deterministic subset (core source first). Free-tier open-model
 endpoints rate-limit; Splitfire retries once, falls back, then uses the deterministic planner.
-
-**In progress:** a CLI (`npx splitfire plan`) that writes the `.splitfire/` pack — the pack schema
-and npm entry point are in place in `package.json` — and an interactive re-split where dragging a
-file to another task recomputes the collision score live.
 
 ## License
 
