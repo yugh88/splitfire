@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, Copy, Download, FileJson, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LaunchInAlan } from "@/components/launch/launch-in-alan";
 import { Button } from "@/components/ui/button";
 import { downloadText, downloadZip } from "@/lib/client/download";
 import { allPrompts, splitfirePack, taskPrompt } from "@/lib/context/export";
@@ -77,36 +78,40 @@ export function ExportMenu({ plan }: { plan: Plan }) {
   ];
 
   return (
-    <div className="relative hidden sm:block" ref={ref}>
-      <Button
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className="font-display text-sm font-semibold"
-      >
-        <Download /> Export to Alan{" "}
-        <ChevronDown className={cn("transition-transform", open && "rotate-180")} />
-      </Button>
-      {open && (
-        <div
-          role="menu"
-          className="border-border bg-popover absolute left-0 z-20 mt-2 w-72 rounded-xl border p-1 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.04)] sm:right-0 sm:left-auto"
+    <div className="flex items-center gap-2">
+      <LaunchInAlan plan={plan} />
+      <div className="relative hidden sm:block" ref={ref}>
+        <Button
+          variant="outline"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          className="font-display text-sm font-semibold"
         >
-          {items.map(({ icon: Icon, label, run }) => (
-            <button
-              key={label}
-              role="menuitem"
-              onClick={() => {
-                run();
-                if (!label.startsWith("Copy")) setOpen(false);
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.05]"
-            >
-              <Icon className="text-muted-foreground size-4" /> {label}
-            </button>
-          ))}
-        </div>
-      )}
+          <Download /> Export to Alan{" "}
+          <ChevronDown className={cn("transition-transform", open && "rotate-180")} />
+        </Button>
+        {open && (
+          <div
+            role="menu"
+            className="border-border bg-popover absolute left-0 z-20 mt-2 w-72 rounded-xl border p-1 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.04)] sm:right-0 sm:left-auto"
+          >
+            {items.map(({ icon: Icon, label, run }) => (
+              <button
+                key={label}
+                role="menuitem"
+                onClick={() => {
+                  run();
+                  if (!label.startsWith("Copy")) setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.05]"
+              >
+                <Icon className="text-muted-foreground size-4" /> {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

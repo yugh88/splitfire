@@ -1,10 +1,20 @@
 import { modelTier } from "@/lib/cost/estimate";
-import { speedupLine } from "@/lib/format";
+import { plural, speedupLine } from "@/lib/format";
 import { GATES_WORKFLOW_PATH, generateGatesWorkflow } from "@/lib/gates/workflow";
 import { taskLabels, waves } from "@/lib/partition/waves";
 import type { Plan, Task } from "@/lib/types";
 
 export type ExportOptions = { shareUrl?: string };
+
+/** The branch a task's agent works on: one branch per task id. */
+export function taskBranch(task: Pick<Task, "id">): string {
+  return `splitfire/${task.id}`;
+}
+
+/** The sibling worktree each agent uses, next to the repo checkout. */
+export function taskWorktree(plan: Pick<Plan, "repo">, task: Pick<Task, "id">): string {
+  return `../${repoName(plan.repo)}-${task.id}`;
+}
 
 /** A self-contained, Alan-ready prompt for one task. */
 export function taskPrompt(task: Task, plan: Plan, opts: ExportOptions = {}): string {
@@ -12,17 +22,27 @@ export function taskPrompt(task: Task, plan: Plan, opts: ExportOptions = {}): st
   const label = labels.get(task.id) ?? task.id;
   const byId = new Map(plan.tasks.map((t) => [t.id, t]));
   const deps = task.dependsOn.map((d) => byId.get(d)).filter((t): t is Task => Boolean(t));
+  const branch = taskBranch(task);
+  const worktree = taskWorktree(plan, task);
 
   const lines = [
     `# ${label} · ${task.title}`,
     "",
-    `Repo: ${plan.repo} @ ${plan.sha.slice(0, 7)} · Branch: \`splitfire/${label}\``,
+    `Repo: ${plan.repo} @ ${plan.sha.slice(0, 7)} · Branch: \`${branch}\``,
     `Overall feature: ${plan.request}`,
     ...(opts.shareUrl ? [`Plan: ${opts.shareUrl}`] : []),
     `Suggested model: ${modelTier(task.difficulty)} model (${task.model}) · Estimate: ${task.estMinutes} min`,
     "",
     "## Goal",
     task.goal,
+    "",
+    "## Start (run from the repo root)",
+    "```sh",
+    `git worktree add ${worktree} -b ${branch}`,
+    `cd ${worktree}`,
+    "```",
+    "",
+    "Work only in this worktree. Every edit, check and commit in this session belongs to this task.",
     "",
     "## Files you own (edit only these)",
     ...task.ownedFiles.map((f) => `- \`${f}\``),
@@ -53,8 +73,49 @@ export function taskPrompt(task: Task, plan: Plan, opts: ExportOptions = {}): st
     "- Change only the files you own. Other agents are editing the rest of the repo in parallel.",
     "- If you truly need to change a file you do not own, stop and report it instead of editing it.",
     "- Keep the change focused on the goal; no drive-by refactors.",
+    '- Commit with a plain message and no AI attribution trailers: no `Co-Authored-By`, no "Generated with" line, no tool names.',
+    `- Push the branch: \`git push -u origin ${branch}\`. Push \`${branch}\`, do not merge.`,
   );
   return lines.join("\n") + "\n";
+}
+
+export type PlannedWave = { index: number; tasks: Task[] };
+
+/** Tasks grouped by dependency depth, in the order their prompts run. */
+export function planWaves(plan: Plan): PlannedWave[] {
+  const byId = new Map(plan.tasks.map((t) => [t.id, t]));
+  return waves(plan.tasks).map((wave) => ({
+    index: wave.index,
+    tasks: wave.ids.map((id) => byId.get(id)).filter((t): t is Task => Boolean(t)),
+  }));
+}
+
+/**
+ * One paste-ready block for a whole wave. Start a session per task and paste that task's block;
+ * the separators say which session each block belongs to.
+ */
+export function wavePrompts(plan: Plan, waveIndex: number, opts: ExportOptions = {}): string {
+  const wave = planWaves(plan).find((w) => w.index === waveIndex);
+  if (!wave) return "";
+  const labels = taskLabels(plan.tasks);
+  const sessions = wave.tasks.map((task, i) =>
+    [
+      `=== SESSION ${i + 1} of ${wave.tasks.length} · ${labels.get(task.id) ?? task.id} · paste into its own Alan session ===`,
+      "",
+      taskPrompt(task, plan, opts).trimEnd(),
+    ].join("\n"),
+  );
+  return [
+    `# Wave ${wave.index + 1} · ${plural(wave.tasks.length, "task")} in parallel`,
+    "",
+    "Open your repo in Alan, start one session per task, and paste each block below into its own session.",
+    "",
+    ...sessions,
+  ].join("\n\n");
+}
+
+function repoName(repo: string): string {
+  return repo.split("/").filter(Boolean).at(-1) ?? "repo";
 }
 
 /** Every task prompt in wave order, separated for pasting into several agents. */
