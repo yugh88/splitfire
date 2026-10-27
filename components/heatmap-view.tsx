@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import { Annotation } from "@/components/annotation";
 import type { Wave } from "@/lib/client/graph-model";
 import type { PlanEventData } from "@/lib/plan/events";
 import type { Metrics } from "@/lib/plan/events";
@@ -41,22 +42,29 @@ export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
     <div className="space-y-4 p-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-heading text-fire-orange text-[10px] tracking-widest">
+          <p className="text-fire-orange text-[10px] font-semibold tracking-[0.18em] uppercase">
             THE DEMO MOMENT
           </p>
-          <h2 className="font-heading mt-1 mb-2 text-2xl">COLLISION HEATMAP</h2>
+          <h2 className="font-display mt-1 mb-2 text-[clamp(1.7rem,3vw,2.25rem)] font-extrabold tracking-[-0.03em]">
+            Collision <span className="serif-accent">heatmap</span>
+          </h2>
           <p className="text-muted-foreground max-w-xl text-sm">
             The model&apos;s draft plan can have agents fighting over the same files.
             Splitfire&apos;s deterministic partitioner repairs it before a single agent starts.
           </p>
         </div>
-        <div className="border-border bg-background/40 flex items-center gap-4 rounded-xl border px-4 py-2">
-          <Score label="Draft" value={partitioned.collisionScoreBefore} tone="text-fire-red" />
-          <ArrowRight className="text-muted-foreground size-4" />
-          <Score label="Repaired" value={partitioned.collisionScore} tone="text-ok-green" />
-          <span className="text-muted-foreground max-w-28 text-[11px]">
-            collision score · files with 2+ owners
-          </span>
+        <div className="border-border rounded-2xl border bg-white/[0.02] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="flex items-center gap-4">
+            <Score label="Draft" value={partitioned.collisionScoreBefore} tone="text-fire-red" />
+            <ArrowRight className="text-muted-foreground size-4" />
+            <Score label="Repaired" value={partitioned.collisionScore} tone="text-ok-green" />
+            <span className="text-muted-foreground max-w-28 text-[11px]">
+              collision score · files with 2+ owners
+            </span>
+          </div>
+          <Annotation arrow="left" className="mt-1 hidden md:inline-flex">
+            draft → repaired
+          </Annotation>
         </div>
       </div>
 
@@ -99,7 +107,9 @@ export function HeatmapView({ partitioned, metrics, waves, labels }: Props) {
       </div>
 
       <section className="border-border bg-background/40 rounded-xl border p-4">
-        <h3 className="font-heading mb-3 text-xs tracking-widest uppercase">Repair log</h3>
+        <h3 className="text-muted-foreground mb-3 text-[11px] font-semibold tracking-[0.16em] uppercase">
+          Repair log
+        </h3>
         <ol className="space-y-1.5 text-sm">
           {partitioned.repairs.map((r, i) => (
             <li key={i} className="flex gap-3">
@@ -125,7 +135,9 @@ function Score({ label, value, tone }: { label: string; value: number; tone: str
   return (
     <div>
       <div className="text-muted-foreground text-[10px] tracking-wider uppercase">{label}</div>
-      <div className={cn("font-heading text-3xl", tone)}>{value}</div>
+      <div className={cn("font-display text-3xl font-extrabold tracking-[-0.03em]", tone)}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -144,7 +156,12 @@ function Matrix(props: {
 }) {
   const accent = props.tone === "red" ? "border-fire-red/30" : "border-ok-green/30";
   return (
-    <section className={cn("bg-background/40 min-w-0 rounded-xl border p-4", accent)}>
+    <section
+      className={cn(
+        "min-w-0 rounded-2xl border bg-white/[0.015] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+        accent,
+      )}
+    >
       <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
         <span
           className={cn(
@@ -160,10 +177,7 @@ function Matrix(props: {
             <tr>
               <th className="text-muted-foreground text-left font-normal">File</th>
               {props.columns.map((c) => (
-                <th
-                  key={c.id}
-                  className="font-heading text-muted-foreground w-9 text-[10px] font-normal"
-                >
+                <th key={c.id} className="text-muted-foreground w-9 text-[10px] font-medium">
                   {c.label}
                 </th>
               ))}
@@ -187,7 +201,7 @@ function Matrix(props: {
                     <td key={c.id} className="p-0">
                       <div
                         className={cn(
-                          "border-border/60 bg-card flex h-7 w-9 items-center justify-center rounded border font-mono text-[10px]",
+                          "border-border/60 bg-card flex h-7 w-9 items-center justify-center rounded-md border font-mono text-[10px]",
                           cell?.className,
                         )}
                       >
@@ -227,9 +241,11 @@ function ContractsFirst(props: {
   const fan = contract ? second : (waves[0]?.ids ?? []);
   const title = (id: string) => tasks.find((t) => t.id === id)?.title ?? id;
   return (
-    <section className="border-border bg-background/40 rounded-xl border p-4">
+    <section className="border-border rounded-2xl border bg-white/[0.015] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-heading text-xs tracking-widest uppercase">Contracts-first</h3>
+        <h3 className="font-display text-lg font-semibold tracking-[-0.02em]">
+          Contracts <span className="serif-accent">first</span>
+        </h3>
         <span className="text-muted-foreground text-xs">
           A chain of waiting tasks becomes one fan-out
         </span>
@@ -248,7 +264,7 @@ function ContractsFirst(props: {
             ))}
             {tasks.length > 4 && <span className="text-muted-foreground">+{tasks.length - 4}</span>}
           </div>
-          <p className="font-heading text-fire-red mt-3 text-2xl uppercase">
+          <p className="font-display text-fire-red mt-3 text-3xl font-extrabold tracking-[-0.03em]">
             {formatMinutes(metrics.serialMinutes)}
           </p>
         </div>
@@ -279,7 +295,7 @@ function ContractsFirst(props: {
               ))}
             </div>
           </div>
-          <p className="font-heading text-ok-green mt-3 text-2xl uppercase">
+          <p className="font-display text-ok-green mt-3 text-3xl font-extrabold tracking-[-0.03em]">
             {formatMinutes(metrics.parallelMinutes)} · {metrics.speedup}× faster
           </p>
         </div>

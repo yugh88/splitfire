@@ -116,7 +116,7 @@ function Flow({ model, agents, lit, selected, onSelect, vertical = false, tracks
     target: e.target,
     style: e.critical
       ? { stroke: "var(--fire-orange)", strokeDasharray: "6 5", strokeWidth: 2 }
-      : { stroke: "#3a4560", strokeWidth: 1.5 },
+      : { stroke: "#2c2c3a", strokeWidth: 1.5 },
     animated: e.critical,
   }));
 
@@ -136,7 +136,7 @@ function Flow({ model, agents, lit, selected, onSelect, vertical = false, tracks
         variant={BackgroundVariant.Dots}
         gap={28}
         size={1}
-        color="rgba(148,160,184,0.08)"
+        color="rgba(255,255,255,0.07)"
       />
       <Controls showInteractive={false} position="bottom-right" />
     </ReactFlow>

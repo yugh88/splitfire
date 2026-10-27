@@ -102,7 +102,10 @@ export function StatusBadge({ status, label, compact = false, className }: Props
     >
       <Icon
         aria-hidden
-        className={cn(compact ? "size-2.5" : "size-3", style.spin && "animate-spin")}
+        className={cn(
+          compact ? "size-2.5" : "size-3",
+          style.spin && "animate-spin motion-reduce:animate-none",
+        )}
       />
       {label && <span className="text-foreground/80">{label}</span>}
       <span>{style.label}</span>

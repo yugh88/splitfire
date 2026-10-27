@@ -12,9 +12,12 @@
   --color-ok-green: var(--ok-green);
   --color-contract-blue: var(--contract-blue);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-pixel);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-display: var(--font-inter-tight);
+  --font-heading: var(--font-inter-tight);
+  --font-serif: var(--font-instrument-serif);
+  --font-script: var(--font-caveat);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -89,42 +92,42 @@
 }
 
 .dark {
-  --background: #070b14;
-  --foreground: #e6e9f0;
-  --card: #0d1322;
-  --card-foreground: #e6e9f0;
-  --popover: #0d1322;
-  --popover-foreground: #e6e9f0;
-  --primary: #ff6a2b;
-  --primary-foreground: #160a04;
-  --secondary: #141b2d;
-  --secondary-foreground: #e6e9f0;
-  --muted: #141b2d;
-  --muted-foreground: #94a0b8;
-  --accent: #18213a;
-  --accent-foreground: #e6e9f0;
+  --background: #0a0a0f;
+  --foreground: #ececf1;
+  --card: #12121a;
+  --card-foreground: #ececf1;
+  --popover: #14141d;
+  --popover-foreground: #ececf1;
+  --primary: #f5a524;
+  --primary-foreground: #1a0e02;
+  --secondary: #17171f;
+  --secondary-foreground: #ececf1;
+  --muted: #171720;
+  --muted-foreground: #a3a3b5;
+  --accent: #1b1b26;
+  --accent-foreground: #ececf1;
   --destructive: #f05252;
-  --border: #1d263b;
-  --input: #222c44;
-  --ring: #fbbf24;
-  --chart-1: #fbbf24;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #f5a524;
+  --chart-1: #f5a524;
   --chart-2: #ff6a2b;
   --chart-3: #f05252;
-  --chart-4: #34d399;
-  --chart-5: #38bdf8;
-  --sidebar: #0d1322;
-  --sidebar-foreground: #e6e9f0;
-  --sidebar-primary: #ff6a2b;
-  --sidebar-primary-foreground: #160a04;
-  --sidebar-accent: #18213a;
-  --sidebar-accent-foreground: #e6e9f0;
-  --sidebar-border: #1d263b;
-  --sidebar-ring: #fbbf24;
-  --fire-amber: #fbbf24;
+  --chart-4: #3ddc97;
+  --chart-5: #5cc8ff;
+  --sidebar: #12121a;
+  --sidebar-foreground: #ececf1;
+  --sidebar-primary: #f5a524;
+  --sidebar-primary-foreground: #1a0e02;
+  --sidebar-accent: #1b1b26;
+  --sidebar-accent-foreground: #ececf1;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #f5a524;
+  --fire-amber: #f5a524;
   --fire-orange: #ff6a2b;
   --fire-red: #f05252;
-  --ok-green: #34d399;
-  --contract-blue: #38bdf8;
+  --ok-green: #3ddc97;
+  --contract-blue: #5cc8ff;
 }
 
 @layer base {
@@ -136,61 +139,144 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  ::selection {
+    background: rgb(245 165 36 / 28%);
+    color: var(--foreground);
   }
 }
 
-/* Dark grid background with a faint glow at the top. */
-.bg-grid {
-  background-color: var(--background);
+@layer utilities {
+  /* Instrument Serif italic, used for one emphasis word per headline. */
+  .serif-accent {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fire-amber);
+  }
+
+  /* Caveat, reserved for short handwritten margin notes. */
+  .script-note {
+    font-family: var(--font-script);
+    font-weight: 600;
+    font-size: 1.05rem;
+    line-height: 1.1;
+    color: rgb(245 165 36 / 90%);
+    letter-spacing: 0.01em;
+    transform: rotate(-3deg);
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: linear-gradient(180deg, rgb(255 255 255 / 2.5%), transparent 32%), var(--card);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Ambient background: slow drifting gradient blobs, fine noise, faint grid.
+   Transform/opacity only, behind content, pointer-events none.
+--------------------------------------------------------------------------- */
+
+.ambient {
+  background: var(--background);
+}
+
+.ambient-grid {
   background-image:
-    radial-gradient(ellipse 70% 35% at 50% -5%, rgb(255 106 43 / 10%), transparent 70%),
-    linear-gradient(rgb(148 160 184 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(148 160 184 / 5%) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    32px 32px,
-    32px 32px;
+    linear-gradient(rgb(255 255 255 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 20%, black 20%, transparent 80%);
 }
 
-.glow-amber {
-  text-shadow: 0 0 18px rgb(251 191 36 / 55%);
+.ambient-noise {
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
 }
 
-.glow-button {
-  box-shadow: 0 0 24px -4px rgb(255 106 43 / 70%);
+.ambient-vignette {
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, transparent 30%, rgb(5 5 9 / 55%) 100%);
 }
 
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: translateY(0);
+.ambient-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.5;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: blob-drift var(--duration, 42s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+
+@keyframes blob-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
   }
   50% {
-    opacity: 1;
-    transform: translateY(-6px);
+    transform: translate3d(4%, -5%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-3%, 4%, 0) scale(0.96);
   }
 }
 
-.pixel-ember {
+.ambient-ember {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  animation: twinkle 4s ease-in-out infinite;
-  pointer-events: none;
+  bottom: -12px;
+  border-radius: 9999px;
+  background: var(--fire-amber);
+  filter: blur(0.5px);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: ember-float var(--duration, 26s) linear infinite;
+  animation-delay: var(--delay, 0s);
 }
 
-.text-fire {
-  background: linear-gradient(90deg, var(--fire-amber), var(--fire-orange), var(--fire-red));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@keyframes ember-float {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--peak, 0.35);
+  }
+  80% {
+    opacity: calc(var(--peak, 0.35) * 0.5);
+  }
+  100% {
+    transform: translate3d(var(--drift, 20px), -78vh, 0);
+    opacity: 0;
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .ambient-blob {
+    animation: none !important;
+  }
+  .ambient-ember,
+  .ember {
+    display: none;
+  }
+  .react-flow__edge.animated path {
+    animation: none !important;
+  }
+}
+
+/* A one-shot burst of rising embers, used on node completion. */
 @keyframes ember-rise {
   0% {
     transform: translate(0, 0) scale(1);
-    opacity: 1;
+    opacity: 0.9;
   }
   100% {
     transform: translate(var(--ember-x), -56px) scale(0.2);
@@ -202,27 +288,32 @@
   position: absolute;
   width: 4px;
   height: 4px;
-  border-radius: 1px;
+  border-radius: 9999px;
   background: var(--fire-amber);
-  box-shadow: 0 0 6px var(--fire-orange);
-  animation: ember-rise 1.4s ease-out forwards;
+  box-shadow: 0 0 8px var(--fire-orange);
+  filter: blur(0.5px);
+  animation: ember-rise 1.6s ease-out forwards;
   pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ember,
-  .pixel-ember {
-    display: none;
-  }
 }
 
 /* React Flow chrome in the fire theme. */
 .react-flow {
   --xy-background-color: transparent;
-  --xy-edge-stroke: #334058;
+  --xy-edge-stroke: #2c2c3a;
   --xy-controls-button-background-color: var(--card);
   --xy-controls-button-background-color-hover: var(--accent);
   --xy-controls-button-color: var(--foreground);
   --xy-controls-button-border-color: var(--border);
   --xy-attribution-background-color: transparent;
+}
+
+.react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.react-flow__controls-button {
+  border-bottom-color: var(--border) !important;
 }

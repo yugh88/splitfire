@@ -31,7 +31,7 @@ export function WaveList({ plan, tasks, waves, labels, agents, selected, onSelec
             : "";
         return (
           <section key={wave.index}>
-            <h3 className="font-heading text-muted-foreground mb-2 text-[11px] tracking-widest uppercase">
+            <h3 className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-[0.16em] uppercase">
               Wave {wave.index + 1}
               {caption}
             </h3>
@@ -43,9 +43,9 @@ export function WaveList({ plan, tasks, waves, labels, agents, selected, onSelec
                     onClick={() => onSelect(selected === task.id ? null : task.id)}
                     aria-expanded={selected === task.id}
                     className={cn(
-                      "bg-card flex w-full items-center gap-3 rounded-lg border px-3 py-3 text-left",
+                      "bg-card flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors",
                       selected === task.id
-                        ? "border-fire-amber"
+                        ? "border-fire-amber/60"
                         : task.kind === "feature"
                           ? "border-border"
                           : KIND[task.kind].border,

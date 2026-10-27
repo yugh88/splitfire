@@ -82,15 +82,15 @@ export function ExportMenu({ plan }: { plan: Plan }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="glow-button font-heading text-xs tracking-widest"
+        className="font-display text-sm font-semibold"
       >
-        <Download /> EXPORT TO ALAN{" "}
+        <Download /> Export to Alan{" "}
         <ChevronDown className={cn("transition-transform", open && "rotate-180")} />
       </Button>
       {open && (
         <div
           role="menu"
-          className="border-border bg-popover absolute left-0 z-20 mt-2 w-72 rounded-xl border p-1 shadow-2xl sm:right-0 sm:left-auto"
+          className="border-border bg-popover absolute left-0 z-20 mt-2 w-72 rounded-xl border p-1 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.04)] sm:right-0 sm:left-auto"
         >
           {items.map(({ icon: Icon, label, run }) => (
             <button
@@ -100,7 +100,7 @@ export function ExportMenu({ plan }: { plan: Plan }) {
                 run();
                 if (!label.startsWith("Copy")) setOpen(false);
               }}
-              className="hover:bg-accent flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.05]"
             >
               <Icon className="text-muted-foreground size-4" /> {label}
             </button>
@@ -116,9 +116,9 @@ export function CopyPromptButton({ task, plan }: { task: Task; plan: Plan }) {
   return (
     <Button
       onClick={() => copy(taskPrompt(task, plan, { shareUrl: shareUrl(plan) }))}
-      className="glow-button font-heading h-11 flex-1 text-xs tracking-widest"
+      className="font-display h-11 flex-1 text-sm font-semibold"
     >
-      {copied ? <Check /> : <Copy />} {copied ? "COPIED" : "COPY ALAN PROMPT"}
+      {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy Alan prompt"}
     </Button>
   );
 }
@@ -129,9 +129,9 @@ export function CopyAllBar({ plan }: { plan: Plan }) {
     <div className="border-border bg-background/90 fixed inset-x-0 bottom-0 z-30 border-t p-4 backdrop-blur">
       <Button
         onClick={() => copy(allPrompts(plan, { shareUrl: shareUrl(plan) }))}
-        className="glow-button font-heading h-12 w-full text-xs tracking-widest"
+        className="font-display h-12 w-full text-sm font-semibold"
       >
-        {copied ? <Check /> : <Copy />} {copied ? "COPIED" : "COPY ALL ALAN PROMPTS"}
+        {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy all Alan prompts"}
       </Button>
     </div>
   );
