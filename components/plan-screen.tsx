@@ -10,6 +10,8 @@ import { MetricCards } from "@/components/metric-cards";
 import { MissionControl } from "@/components/mission-control/mission-control";
 import { useTracks } from "@/components/mission-control/use-tracks";
 import { ProgressSteps } from "@/components/progress-steps";
+import { ResplitToolbar } from "@/components/resplit/resplit-toolbar";
+import { ResplitScope, useResplitPlan } from "@/components/resplit/use-resplit";
 import { TaskCard } from "@/components/task-card";
 import { WaveList } from "@/components/wave-list";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -42,9 +44,42 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
   const [tab, setTab] = useState<"graph" | "heatmap">("graph");
   const [selected, setSelected] = useState<string | null>(null);
   const [lit, setLit] = useState<Set<string>>(new Set());
-  const model = useMemo(() => graphModel(state), [state]);
-  const tasks = state.partitioned?.tasks;
-  const labels = useMemo(() => taskLabels(tasks ?? state.proposals), [tasks, state.proposals]);
+  const resplit = useResplitPlan({
+    tasks: state.partitioned?.tasks ?? null,
+    metrics: state.metrics,
+    agents,
+    planKey: state.report?.plan.id ?? null,
+  });
+  const view = useMemo<PlanState>(() => {
+    const edited = resplit.view;
+    if (!edited?.edited || !state.partitioned) return state;
+    return {
+      ...state,
+      partitioned: {
+        ...state.partitioned,
+        tasks: edited.tasks,
+        collisionScore: edited.collisionScore,
+      },
+      metrics: edited.metrics,
+    };
+  }, [state, resplit.view]);
+  const model = useMemo(() => graphModel(view), [view]);
+  const tasks = view.partitioned?.tasks;
+  const labels = useMemo(() => taskLabels(tasks ?? view.proposals), [tasks, view.proposals]);
+  const editedPlan = useMemo(() => {
+    const edited = resplit.view;
+    const plan = state.report?.plan;
+    if (!plan || !edited?.edited) return plan;
+    return {
+      ...plan,
+      tasks: edited.tasks,
+      collisionScore: edited.collisionScore,
+      serialMinutes: edited.metrics.serialMinutes,
+      parallelMinutes: edited.metrics.parallelMinutes,
+      speedup: edited.metrics.speedup,
+      agents: edited.metrics.agents,
+    };
+  }, [state.report?.plan, resplit.view]);
   const planId = state.report?.plan.id ?? null;
   const { tracks, live, ready, toggle } = useTracks(planId);
   const trackStatuses = useMemo(() => {
@@ -56,188 +91,192 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
 
   useEffect(() => {
     setLit(new Set());
-    if (state.stage !== "done") return;
+    if (view.stage !== "done") return;
     const order = model.waves.flatMap((w) => w.ids);
     const timers = order.map((id, i) =>
       setTimeout(() => setLit((prev) => new Set(prev).add(id)), 250 + i * 160),
     );
     return () => timers.forEach(clearTimeout);
-  }, [state.stage, model.waves]);
+  }, [view.stage, model.waves]);
 
   const done =
-    state.stage === "done" && state.metrics && state.partitioned
-      ? { metrics: state.metrics, partitioned: state.partitioned, tasks: state.partitioned.tasks }
+    view.stage === "done" && view.metrics && view.partitioned
+      ? { metrics: view.metrics, partitioned: view.partitioned, tasks: view.partitioned.tasks }
       : null;
   const task = tasks?.find((t) => t.id === selected) ?? null;
   const sha = state.ingested?.sha ?? state.report?.plan.sha;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 pb-24 sm:px-6">
-      <header className="border-border flex flex-wrap items-center gap-x-6 gap-y-3 border-b py-4">
-        <Logo />
-        <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
-          <div className="text-muted-foreground truncate font-mono text-xs">
-            {state.ingested?.repo ?? repo}
-            {sha ? ` @ ${sha.slice(0, 7)}` : ""}
-          </div>
-          <div
-            className="font-display text-sm font-semibold tracking-[-0.01em] sm:truncate sm:text-base"
-            title={request}
-          >
-            {request}
-          </div>
-        </div>
-        <div className="ml-auto flex flex-wrap gap-2 sm:ml-0">{actions}</div>
-      </header>
-
-      {state.stage !== "done" && (
-        <div className="py-4">
-          <ProgressSteps state={state} />
-        </div>
-      )}
-
-      {state.report?.notice && (
-        <div
-          role="status"
-          className="border-fire-amber/25 bg-fire-amber/[0.07] mt-4 flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
-        >
-          <AlertTriangle className="text-fire-amber size-4 shrink-0" />
-          {state.report.notice === "demo budget reached"
-            ? "Demo budget reached — this plan was built by the deterministic planner."
-            : `Note: ${state.report.notice}. This plan was built by the deterministic planner.`}
-        </div>
-      )}
-
-      {done && (
-        <div className="mt-7">
-          <MetricCards
-            compact={!wide}
-            metrics={done.metrics}
-            tasks={done.tasks}
-            waves={model.waves}
-            collisionsBefore={done.partitioned.collisionScoreBefore}
-          />
-        </div>
-      )}
-
-      {planId && (
-        <MissionControl
-          planId={planId}
-          tracks={tracks}
-          labels={labels}
-          live={live}
-          ready={ready}
-          onToggle={toggle}
-        />
-      )}
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <section className="border-border bg-card/60 min-w-0 rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-          <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2">
-            <div
-              role="tablist"
-              className="border-border flex rounded-xl border bg-white/[0.02] p-1"
-            >
-              {(["graph", "heatmap"] as const).map((t) => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={tab === t}
-                  disabled={t === "heatmap" && !done}
-                  onClick={() => setTab(t)}
-                  className={cn(
-                    "rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition-colors disabled:opacity-40",
-                    tab === t
-                      ? "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
+    <ResplitScope controller={resplit}>
+      <div className="mx-auto w-full max-w-[1600px] px-4 pb-24 sm:px-6">
+        <header className="border-border flex flex-wrap items-center gap-x-6 gap-y-3 border-b py-4">
+          <Logo />
+          <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+            <div className="text-muted-foreground truncate font-mono text-xs">
+              {state.ingested?.repo ?? repo}
+              {sha ? ` @ ${sha.slice(0, 7)}` : ""}
             </div>
-            <Legend />
+            <div
+              className="font-display text-sm font-semibold tracking-[-0.01em] sm:truncate sm:text-base"
+              title={request}
+            >
+              {request}
+            </div>
           </div>
+          <div className="ml-auto flex flex-wrap gap-2 sm:ml-0">{actions}</div>
+        </header>
 
-          {tab === "heatmap" && done ? (
-            <HeatmapView
-              partitioned={done.partitioned}
+        {state.stage !== "done" && (
+          <div className="py-4">
+            <ProgressSteps state={state} />
+          </div>
+        )}
+
+        {state.report?.notice && (
+          <div
+            role="status"
+            className="border-fire-amber/25 bg-fire-amber/[0.07] mt-4 flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+          >
+            <AlertTriangle className="text-fire-amber size-4 shrink-0" />
+            {state.report.notice === "demo budget reached"
+              ? "Demo budget reached — this plan was built by the deterministic planner."
+              : `Note: ${state.report.notice}. This plan was built by the deterministic planner.`}
+          </div>
+        )}
+
+        {done && (
+          <div className="mt-7" key={resplit.moves}>
+            <MetricCards
+              compact={!wide}
               metrics={done.metrics}
+              tasks={done.tasks}
               waves={model.waves}
-              labels={labels}
+              collisionsBefore={done.partitioned.collisionScoreBefore}
             />
-          ) : (
-            <>
-              {wide ? (
-                <div className="relative h-[620px]">
-                  {model.nodes.length > 0 ? (
-                    <TaskGraph
-                      model={model}
-                      agents={agents}
-                      lit={lit}
-                      selected={selected}
-                      onSelect={setSelected}
-                      tracks={trackStatuses}
-                    />
-                  ) : (
-                    <Waiting />
-                  )}
-                  {state.report && (
-                    <span className="bg-background/80 text-muted-foreground absolute top-3 right-3 rounded-md px-2 py-1 text-[11px]">
-                      {PLANNER_LABEL[state.report.planner]}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <div className="p-3">
-                  {done ? (
-                    <WaveList
-                      plan={state.report?.plan}
-                      tasks={done.tasks}
-                      waves={model.waves}
-                      labels={labels}
-                      agents={agents}
-                      selected={selected}
-                      onSelect={setSelected}
-                    />
-                  ) : (
-                    <Waiting count={state.proposals.length} />
-                  )}
-                </div>
-              )}
-              {done && (
-                <ContractsCallout
-                  tasks={done.tasks}
-                  model={model}
-                  labels={labels}
-                  agents={done.metrics.agents}
-                />
-              )}
-            </>
-          )}
-        </section>
+          </div>
+        )}
 
-        {wide && (desktop || task) && (
-          <aside>
-            {task ? (
-              <TaskCard
-                task={task}
+        {planId && (
+          <MissionControl
+            planId={planId}
+            tracks={tracks}
+            labels={labels}
+            live={live}
+            ready={ready}
+            onToggle={toggle}
+          />
+        )}
+
+        {done && <ResplitToolbar controller={resplit} report={state.report} />}
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+          <section className="border-border bg-card/60 min-w-0 rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2">
+              <div
+                role="tablist"
+                className="border-border flex rounded-xl border bg-white/[0.02] p-1"
+              >
+                {(["graph", "heatmap"] as const).map((t) => (
+                  <button
+                    key={t}
+                    role="tab"
+                    aria-selected={tab === t}
+                    disabled={t === "heatmap" && !done}
+                    onClick={() => setTab(t)}
+                    className={cn(
+                      "rounded-lg px-4 py-1.5 text-xs font-medium capitalize transition-colors disabled:opacity-40",
+                      tab === t
+                        ? "text-foreground bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <Legend />
+            </div>
+
+            {tab === "heatmap" && done ? (
+              <HeatmapView
+                partitioned={done.partitioned}
+                metrics={done.metrics}
+                waves={model.waves}
                 labels={labels}
-                plan={state.report?.plan}
-                onClose={() => setSelected(null)}
               />
             ) : (
-              <div className="border-border text-muted-foreground rounded-2xl border border-dashed bg-white/[0.015] p-4 text-sm">
-                {done
-                  ? "Select a task to see its files, model, cost and checks."
-                  : "Tasks appear in the graph as the planner streams them."}
-              </div>
+              <>
+                {wide ? (
+                  <div className="relative h-[620px]">
+                    {model.nodes.length > 0 ? (
+                      <TaskGraph
+                        model={model}
+                        agents={agents}
+                        lit={lit}
+                        selected={selected}
+                        onSelect={setSelected}
+                        tracks={trackStatuses}
+                      />
+                    ) : (
+                      <Waiting />
+                    )}
+                    {state.report && (
+                      <span className="bg-background/80 text-muted-foreground absolute top-3 right-3 rounded-md px-2 py-1 text-[11px]">
+                        {PLANNER_LABEL[state.report.planner]}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3">
+                    {done ? (
+                      <WaveList
+                        plan={editedPlan}
+                        tasks={done.tasks}
+                        waves={model.waves}
+                        labels={labels}
+                        agents={agents}
+                        selected={selected}
+                        onSelect={setSelected}
+                      />
+                    ) : (
+                      <Waiting count={state.proposals.length} />
+                    )}
+                  </div>
+                )}
+                {done && (
+                  <ContractsCallout
+                    tasks={done.tasks}
+                    model={model}
+                    labels={labels}
+                    agents={done.metrics.agents}
+                  />
+                )}
+              </>
             )}
-          </aside>
-        )}
+          </section>
+
+          {wide && (desktop || task) && (
+            <aside>
+              {task ? (
+                <TaskCard
+                  task={task}
+                  labels={labels}
+                  plan={editedPlan}
+                  onClose={() => setSelected(null)}
+                />
+              ) : (
+                <div className="border-border text-muted-foreground rounded-2xl border border-dashed bg-white/[0.015] p-4 text-sm">
+                  {done
+                    ? "Select a task to see its files, model, cost and checks."
+                    : "Tasks appear in the graph as the planner streams them."}
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
+        {!wide && state.report && <CopyAllBar plan={editedPlan ?? state.report.plan} />}
       </div>
-      {!wide && state.report && <CopyAllBar plan={state.report.plan} />}
-    </div>
+    </ResplitScope>
   );
 }
 
