@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CostMeter } from "@/components/mission-control/cost-meter";
 import { StatusBadge, TRACK } from "@/components/mission-control/status-badge";
 import { Switch } from "@/components/ui/switch";
+import type { Metrics, PlannerKind } from "@/lib/plan/events";
 import type { TaskStatus, TaskTrack } from "@/lib/track/types";
 import { cn } from "@/lib/utils";
 
@@ -13,12 +15,23 @@ type Props = {
   live: boolean;
   ready: boolean;
   onToggle: () => void;
+  metrics?: Metrics | null;
+  planner?: PlannerKind | null;
 };
 
 const COUNTERS: TaskStatus[] = ["working", "checking", "passed", "failed", "merged"];
 
-/** Live roll-up of every task branch: counts, per-task badges and elapsed time. */
-export function MissionControl({ planId, tracks, labels, live, ready, onToggle }: Props) {
+/** Live roll-up of every task branch: spend, counts, per-task badges and elapsed time. */
+export function MissionControl({
+  planId,
+  tracks,
+  labels,
+  live,
+  ready,
+  onToggle,
+  metrics,
+  planner,
+}: Props) {
   const counts = countStatuses(tracks ?? []);
   const startedAt = useElapsedStart(planId, tracks);
   const allMerged =
@@ -62,7 +75,17 @@ export function MissionControl({ planId, tracks, labels, live, ready, onToggle }
         ) : (
           <span className="text-muted-foreground font-mono text-xs">checking GitHub…</span>
         )}
-        <span className="text-muted-foreground ml-auto font-mono text-xs">elapsed {elapsed}</span>
+        <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+          {metrics && planner && (
+            <CostMeter
+              agents={metrics.agents}
+              speedup={metrics.speedup}
+              totalCostUsd={metrics.totalCostUsd}
+              planner={planner}
+            />
+          )}
+          <span className="text-muted-foreground font-mono text-xs">elapsed {elapsed}</span>
+        </div>
       </div>
       {tracks && tracks.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">

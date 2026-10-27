@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { allPrompts, splitfirePack, taskPrompt } from "@/lib/context/export";
+import {
+  allPrompts,
+  planWaves,
+  splitfirePack,
+  taskBranch,
+  taskPrompt,
+  taskWorktree,
+  wavePrompts,
+} from "@/lib/context/export";
 import { generateGatesWorkflow } from "@/lib/gates/workflow";
 import type { Plan, Task } from "@/lib/types";
 
@@ -43,7 +51,7 @@ describe("taskPrompt", () => {
   it("is a self-contained brief with ownership, context, waits and checks", () => {
     const prompt = taskPrompt(plan.tasks[0]!, plan, { shareUrl: "https://x/p/abc" });
     expect(prompt).toContain("# T1 · Title ui");
-    expect(prompt).toContain("Branch: `splitfire/T1`");
+    expect(prompt).toContain("Branch: `splitfire/ui`");
     expect(prompt).toContain("## Files you own (edit only these)\n- `src/ui.ts`");
     expect(prompt).toContain("## Context pack (read-only, do not edit)\n- `src/types.ts`");
     expect(prompt).toContain(
@@ -53,10 +61,45 @@ describe("taskPrompt", () => {
     expect(prompt).toContain("Plan: https://x/p/abc");
   });
 
+  it("gives the exact worktree command, branch and push-only rule", () => {
+    const prompt = taskPrompt(plan.tasks[0]!, plan);
+    expect(taskBranch(plan.tasks[0]!)).toBe("splitfire/ui");
+    expect(taskWorktree(plan, plan.tasks[0]!)).toBe("../app-ui");
+    expect(prompt).toContain(
+      "## Start (run from the repo root)\n```sh\ngit worktree add ../app-ui -b splitfire/ui\ncd ../app-ui\n```",
+    );
+    expect(prompt).toContain("no `Co-Authored-By`");
+    expect(prompt).toContain(
+      "Push the branch: `git push -u origin splitfire/ui`. Push `splitfire/ui`, do not merge.",
+    );
+  });
+
   it("omits empty sections", () => {
     const prompt = taskPrompt(plan.tasks[1]!, plan);
     expect(prompt).not.toContain("Context pack");
     expect(prompt).not.toContain("Before you start");
+  });
+});
+
+describe("planWaves / wavePrompts", () => {
+  it("groups tasks by dependency depth", () => {
+    expect(planWaves(plan).map((w) => w.tasks.map((t) => t.id))).toEqual([["contracts"], ["ui"]]);
+  });
+
+  it("builds one paste-ready block with a session separator per task", () => {
+    const block = wavePrompts(plan, 0);
+    expect(block).toContain("# Wave 1 · 1 task in parallel");
+    expect(block).toContain("=== SESSION 1 of 1 · T0 · paste into its own Alan session ===");
+    expect(block).toContain("git worktree add ../app-contracts -b splitfire/contracts");
+
+    const second = wavePrompts(plan, 1);
+    expect(second).toContain("# Wave 2 · 1 task in parallel");
+    expect(second).toContain("git worktree add ../app-ui -b splitfire/ui");
+    expect(second).not.toContain("splitfire/contracts`.");
+  });
+
+  it("returns an empty block for an unknown wave", () => {
+    expect(wavePrompts(plan, 9)).toBe("");
   });
 });
 

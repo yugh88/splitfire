@@ -164,6 +164,8 @@ export function PlanScreen({ state, repo, request, agents, actions }: Props) {
             live={live}
             ready={ready}
             onToggle={toggle}
+            metrics={state.metrics}
+            planner={state.report?.planner ?? null}
           />
         )}
 
