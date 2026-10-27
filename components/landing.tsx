@@ -9,6 +9,8 @@ import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import featuredPlan from "@/data/featured-plan.json";
+import { formatMinutes, formatTokens, formatUsd, percentSaved } from "@/lib/format";
 import { AGENT_OPTIONS } from "@/lib/partition/schedule";
 import { cn } from "@/lib/utils";
 
@@ -275,38 +277,50 @@ function HeroHeadline() {
   );
 }
 
-/** Illustrative numbers from the design's example plan. */
+/**
+ * Every number here is computed from data/featured-plan.json: a real plan the app's planner
+ * produced for shadcn-ui/taxonomy. Regenerate the fixture instead of hand-editing the stats.
+ */
 function ExampleStats() {
+  const { meta, report } = featuredPlan;
+  const plan = report.plan;
+  const saved = percentSaved(plan.tokensFullRepo, plan.tokensWithPacks);
+  const agents = `${plan.agents} agent${plan.agents === 1 ? "" : "s"}`;
   const stats = [
     {
-      value: "0",
+      value: String(plan.collisionScore),
       label: "file collisions",
-      note: "7 overlaps auto-repaired",
+      note: `${plan.tasks.length} tasks · one owner per file`,
       tone: "text-ok-green",
     },
     {
-      value: "2.7×",
+      value: `${plan.speedup}×`,
       label: "faster than serial",
-      note: "4h 05m → 1h 30m",
+      note: `${formatMinutes(plan.serialMinutes)} → ${formatMinutes(plan.parallelMinutes)} · ${agents}`,
       tone: "text-fire-amber",
     },
     {
-      value: "87%",
+      value: `${saved}%`,
       label: "fewer tokens",
-      note: "per-task context packs",
+      note: `${formatTokens(plan.tokensWithPacks)} vs ${formatTokens(plan.tokensFullRepo)} tokens`,
       tone: "text-contract-blue",
     },
-    { value: "$0.03", label: "per plan", note: "open models, routed", tone: "text-foreground" },
+    {
+      value: formatUsd(plan.totalCostUsd),
+      label: "per plan",
+      note: "open models · $0 endpoint pricing",
+      tone: "text-foreground",
+    },
   ];
   return (
     <section id="example" className="scroll-mt-8">
       <Reveal>
         <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
           <p className="text-muted-foreground text-[11px] font-medium tracking-[0.16em] uppercase">
-            Example plan · acme/storefront · 4 agents
+            Real plan · {meta.repo} · “{meta.request}” · {meta.generatedAt}
           </p>
           <Annotation arrow="left" className="hidden sm:inline-flex">
-            zero merge conflicts
+            zero file collisions
           </Annotation>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -325,6 +339,19 @@ function ExampleStats() {
             </div>
           ))}
         </div>
+        <p className="text-muted-foreground mt-4 text-center text-xs">
+          Planned by {meta.plannerModel} for {meta.repo}@{plan.sha.slice(0, 7)} ·{" "}
+          <a
+            href={meta.shareUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-fire-amber underline underline-offset-2"
+          >
+            Open this plan →
+          </a>{" "}
+          · numbers computed from the committed fixture in{" "}
+          <span className="font-mono">data/featured-plan.json</span>
+        </p>
       </Reveal>
     </section>
   );
