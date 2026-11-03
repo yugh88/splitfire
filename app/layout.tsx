@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Caveat, Instrument_Serif, Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AmbientBackground } from "@/components/ambient-background";
 import "./globals.css";
 
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         <AmbientBackground />
         <div className="relative z-10">{children}</div>
+        <Analytics />
       </body>
     </html>
   );
